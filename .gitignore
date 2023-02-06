@@ -1,0 +1,3 @@
+*.csv
+.flake8
+pyrightconfig.json
