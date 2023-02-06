@@ -13,7 +13,7 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from main import process, stream, command, Status, CmdType
 from main import check_done, clear_done, get_measure
 
-from sim import plot_sim, set_target_angle, set_rx_coord
+from sim import plot_sim, set_phases, set_target_angle, set_rx_coord
 
 
 phase_shift = np.zeros(16, dtype=np.uint8)
@@ -215,7 +215,8 @@ class Widget(QWidget):
 
             dial = QDial()
             _dials.append(dial)
-            dial.setRange(0, 63)
+            # dial.setRange(0, 64)
+            dial.setRange(0, 16)
             dial.setNotchesVisible(True)
             dial.setNotchTarget(8)
             dial.setWrapping(True)
@@ -236,7 +237,8 @@ class Widget(QWidget):
             grid.addWidget(create_single_phase_layout(i), r, c)
 
         def updater():
-            set_target_angle(theta_slider.value(), phi_slider.value())
+            # set_target_angle(theta_slider.value(), phi_slider.value())
+            set_phases(np.flip(phase_shift).reshape(4, 4) * 22.5)
             for val, label, dial in zip(phase_shift, _labels, _dials):
                 dial.setValue(val)
                 # label.setText(f"{val * 5.6:.1f}")

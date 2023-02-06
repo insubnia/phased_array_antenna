@@ -21,6 +21,7 @@ xms = np.arange(0.5 - M / 2, M / 2, 1) * dx
 yns = np.arange(0.5 - N / 2, N / 2, 1) * dy
 
 # Global Variables
+phases = np.zeros((M, N), dtype=float)
 theta0, phi0 = 20, 30
 surf = None
 
@@ -96,6 +97,9 @@ def set_target_angle(theta, phi):
     global theta0, phi0
     theta0, phi0 = theta, phi
 
+def set_phases(_phases_d):
+    global phases
+    phases = _phases_d
 
 def set_rx_coord(idx, coord):
     rx_coords[idx] = coord
@@ -127,8 +131,8 @@ def update(frame):
     if 0:
         R = get_pattern_data_from_target_angle(theta0, phi0)
     else:
-        phase = get_desired_phase(theta0, phi0)
-        R = get_pattern_data_from_phase(phase)
+        # phases = get_desired_phase(theta0, phi0)
+        R = get_pattern_data_from_phase(phases)
     X, Y, Z = spherical_to_cartesian(R, THETA, PHI)
 
     global surf
@@ -136,7 +140,7 @@ def update(frame):
         surf.remove()
     surf = ax.plot_surface(X, Y, Z, cmap=plt.get_cmap('jet'),
                            alpha=0.3, linewidth=0.1, rstride=1, cstride=1, antialiased=True)
-    text.set_text(f"θ: {theta0}° \nϕ: {phi0}°")
+    # text.set_text(f"θ: {theta0}° \nϕ: {phi0}°")
 
     plot_receivers()
 
