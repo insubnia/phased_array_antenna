@@ -16,7 +16,7 @@ from main import check_done, clear_done, get_measure
 from sim import plot_sim, set_phases, set_target_angle, set_rx_coord
 
 
-phase_shift = np.zeros(16, dtype=np.uint8)
+phases = np.zeros(16, dtype=np.int8)
 
 
 def resource_path(relative_path):
@@ -31,13 +31,13 @@ def synchronizer():
         if stream.status == Status.NO_CONN:
             pass
         # copy stream data to gui data
-        command.phases = phase_shift.copy()
+        command.phases = phases.copy()
         time.sleep(0.1)
 
 
 def get_phase_display_string(arr=None, string=""):
     if arr is None:
-        arr = phase_shift
+        arr = phases
 
     for r in reversed(range(4)):
         for c in reversed(range(4)):
@@ -220,7 +220,7 @@ class Widget(QWidget):
             dial.setNotchesVisible(True)
             dial.setNotchTarget(8)
             dial.setWrapping(True)
-            dial.valueChanged.connect(lambda: phase_shift.put(idx, dial.value()))
+            dial.valueChanged.connect(lambda: phases.put(idx, dial.value()))
             grid.addWidget(dial, 0, 0)
 
             label = QLabel(f"{dial.value()}")
@@ -238,8 +238,8 @@ class Widget(QWidget):
 
         def updater():
             # set_target_angle(theta_slider.value(), phi_slider.value())
-            set_phases(np.flip(phase_shift).reshape(4, 4) * 22.5)
-            for val, label, dial in zip(phase_shift, _labels, _dials):
+            set_phases(np.flip(phases).reshape(4, 4) * 22.5)
+            for val, label, dial in zip(phases, _labels, _dials):
                 dial.setValue(val)
                 # label.setText(f"{val * 5.6:.1f}")
                 label.setText(f"{val:2}")
@@ -375,8 +375,8 @@ class Widget(QWidget):
         groupbox.setFlat(True)
 
         def set_ps(idx):
-            global phase_shift
-            phase_shift = stream.peri_infos[idx].phases.copy()
+            global phases
+            phases = stream.peri_infos[idx].phases.copy()
 
         grid = QGridLayout()
 
@@ -395,7 +395,7 @@ class Widget(QWidget):
         clear_button = QPushButton("Reset")
         clear_button.setStyleSheet(button_stylesheet)
         clear_button.setFixedHeight(60)
-        clear_button.clicked.connect(lambda : (command.set_cmd(CmdType.RESET), phase_shift.fill(0)))
+        clear_button.clicked.connect(lambda : (command.set_cmd(CmdType.RESET), phases.fill(0)))
         grid.addWidget(clear_button, 0, 2, 1, 2)
 
         # Target Buttons

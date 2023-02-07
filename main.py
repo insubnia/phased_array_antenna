@@ -43,16 +43,16 @@ class CmdType(IntEnum):
 class Stream(object):
     def __init__(self):
         self.status = Status.NO_CONN
-        self.curr_phases = np.zeros((4, 4), dtype=np.int8)
+        self.curr_phases = np.zeros(16, dtype=np.int8)
         self.rfdc_range = np.zeros((3, 16), dtype=np.uint16)
 
         class PeriInfo(object):
             def __init__(self):
                 self.address = None
                 self.connected = False
-                self.rfdc_adc, bat_adc = 0, 0
-                self.phases = np.zeros((4, 4), dtype=np.int8)
-                self.rfdc_ranges = np.zeros((4, 4), dtype=np.uint16)
+                self.rfdc_adc, self.bat_adc = 0, 0
+                self.phases = np.zeros(16, dtype=np.int8)
+                self.rfdc_ranges = np.zeros(16, dtype=np.uint16)
                 self.position = np.zeros(3, dtype=int)
         self.peri_infos = [PeriInfo() for _ in range(3)]
 
