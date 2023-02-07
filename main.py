@@ -43,17 +43,18 @@ class CmdType(IntEnum):
 class Stream(object):
     def __init__(self):
         self.status = Status.NO_CONN
-        self.ps_arr = np.zeros((4, 16), dtype=np.int8)
+        self.curr_phases = np.zeros((4, 4), dtype=np.int8)
         self.rfdc_range = np.zeros((3, 16), dtype=np.uint16)
 
-        self.peri_infos = list()
         class PeriInfo(object):
             def __init__(self):
                 self.address = None
-                self.rfdc_adc = 0
-                self.bat_adc = 0
+                self.connected = False
+                self.rfdc_adc, bat_adc = 0, 0
+                self.phases = np.zeros((4, 4), dtype=np.int8)
+                self.rfdc_ranges = np.zeros((4, 4), dtype=np.uint16)
                 self.position = np.zeros(3, dtype=int)
-        [self.peri_infos.append(PeriInfo()) for i in range(3)]
+        self.peri_infos = [PeriInfo() for _ in range(3)]
 
 
 class Command(object):
@@ -61,7 +62,7 @@ class Command(object):
         self.cmd = CmdType.NOP
         self.valid_cmd = CmdType.NOP
         self.running = False
-        self.ps_arr = np.zeros(16, dtype=np.uint8)
+        self.phases = np.zeros(16, dtype=np.uint8)
     
     def set_cmd(self, cmd):
         self.cmd = cmd
@@ -105,15 +106,16 @@ def get_measure():
 
 def get_logstring():
     string = ""
-    for i in range(3):
-        if stream.peri_infos[i].address[0] == 0:
+    for i, peri in enumerate(stream.peri_infos):
+        if peri.address[0] == 0:
             continue
-        pos = stream.peri_infos[i].position
+        pos = peri.position
         tmp = f"{i + 1}, {pos[0]}, {pos[1]}, {pos[2]}"
-        for v in stream.ps_arr[i + 1]:
+        for v in peri.phases:
             tmp += f", {v}"
-        for v in stream.rfdc_range[i]:
+        for v in peri.rfdc_ranges:
             tmp += f", {v}"
+
         global ccp, scanning_rate, tops_p_watt
         ccp = random.randint(242, 246)
         ccp /= 10
@@ -153,7 +155,7 @@ def process():
             server.sock.settimeout(5)
 
         packed_cmd = command.cmd.to_bytes(1, byteorder="little")
-        packed_cmd += command.ps_arr.tobytes()
+        packed_cmd += command.phases.tobytes()
         # print(f"send packet {packed_cmd}")
         server.sock.sendto(packed_cmd, server.client_addr)
         command.cmd = CmdType.NOP
@@ -166,20 +168,14 @@ def process():
             continue
 
         stream.status = data[0]
-        o = 1
-        for i in range(4):
-            stream.ps_arr[i] = np.frombuffer(data[o: o+16], dtype=np.int8)
-            o += 16
-        o = 66
-        for i in range(3):
-            stream.rfdc_range[i] = np.frombuffer(data[o: o+32], dtype=np.uint16)
-            o += 32
-        o = 162
-        for i in range(3):
-            stream.peri_infos[i].address = np.frombuffer(data[o: o+6], dtype=np.uint8)
-            stream.peri_infos[i].rfdc_adc, stream.peri_infos[i].bat_adc = \
-                np.frombuffer(data[o+6:o+10], dtype=np.uint16)
-            o += 32
+        stream.curr_phases = np.frombuffer(data[4:20], dtype=np.int8)
+        o = 128
+        for i, peri in enumerate(stream.peri_infos):
+            peri.address = np.frombuffer(data[o:o+6], dtype=np.uint8)
+            peri.rfdc_adc, peri.bat_adc = np.frombuffer(data[o+8:o+12], dtype=np.uint16)
+            peri.phases = np.frombuffer(data[o+12: o+28], dtype=np.int8)
+            peri.rfdc_ranges = np.frombuffer(data[o+28: o+60], dtype=np.uint16)
+            o += 128
 
         # Command processing
         # print(f"cmd: {command.cmd} | valid cmd: {command.valid_cmd} | running: {command.running} | status: {stream.status}")

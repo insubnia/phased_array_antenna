@@ -31,7 +31,7 @@ def synchronizer():
         if stream.status == Status.NO_CONN:
             pass
         # copy stream data to gui data
-        command.ps_arr = phase_shift.copy()
+        command.phases = phase_shift.copy()
         time.sleep(0.1)
 
 
@@ -346,20 +346,19 @@ class Widget(QWidget):
             return section_num - 1
 
         def updater():
-            for i in range(3):
-                level = get_level(stream.peri_infos[i].rfdc_adc)
+            for i, peri in enumerate(stream.peri_infos):
+                level = get_level(peri.rfdc_adc)
                 _rfdc_labels[i].setPixmap(pixmaps[level])
-                _rfdc_digits[i].setText(f"{stream.peri_infos[i].rfdc_adc}")
+                _rfdc_digits[i].setText(f"{peri.rfdc_adc}")
 
                 # 3000:4095 = 0:100
                 min_level, max_level = 3000, 4095
-                x = min(max_level, max(min_level, stream.peri_infos[i].bat_adc))
+                x = min(max_level, max(min_level, peri.bat_adc))
                 vbat_percent = int((x - min_level) / (max_level - min_level) * 100)
-                # print(f"{stream.peri_infos[i].bat_adc} -> {x} -> {vbat_percent}")
+                # print(f"{peri.bat_adc} -> {x} -> {vbat_percent}")
                 _vbat_pbars[i].setValue(vbat_percent)
-                _vbat_labels[i].setText(f"{stream.peri_infos[i].bat_adc}")
-
-                _profile_labels[i].setText(get_phase_display_string(stream.ps_arr[i + 1]))
+                _vbat_labels[i].setText(f"{peri.bat_adc}")
+                _profile_labels[i].setText(get_phase_display_string(peri.phases))
 
         timer = QTimer(self)
         timer.timeout.connect(updater)
@@ -377,7 +376,7 @@ class Widget(QWidget):
 
         def set_ps(idx):
             global phase_shift
-            phase_shift = stream.ps_arr[idx].copy()
+            phase_shift = stream.peri_infos[idx].phases.copy()
 
         grid = QGridLayout()
 
@@ -410,20 +409,20 @@ class Widget(QWidget):
         target1_button = QPushButton("Target 1")
         target1_button.setStyleSheet(button_stylesheet)
         target1_button.setFixedHeight(35)
-        target1_button.clicked.connect(lambda : (command.set_cmd(CmdType.TARGET_1), set_ps(1)))
+        target1_button.clicked.connect(lambda : (command.set_cmd(CmdType.TARGET_1), set_ps(0)))
         grid.addWidget(target1_button, 1, 1)
 
         target2_button = QPushButton("Target 2")
         target2_button.setStyleSheet(button_stylesheet)
         target2_button.font
         target2_button.setFixedHeight(35)
-        target2_button.clicked.connect(lambda : (command.set_cmd(CmdType.TARGET_2), set_ps(2)))
+        target2_button.clicked.connect(lambda : (command.set_cmd(CmdType.TARGET_2), set_ps(1)))
         grid.addWidget(target2_button, 1, 2)
 
         target3_button = QPushButton("Target 3")
         target3_button.setStyleSheet(button_stylesheet)
         target3_button.setFixedHeight(35)
-        target3_button.clicked.connect(lambda : (command.set_cmd(CmdType.TARGET_3), set_ps(3)))
+        target3_button.clicked.connect(lambda : (command.set_cmd(CmdType.TARGET_3), set_ps(2)))
         grid.addWidget(target3_button, 1, 3)
 
         groupbox.setLayout(grid)
