@@ -47,11 +47,11 @@ def remap(x):
 def get_phase_display_string(arr1d=None, string=""):
     if arr1d is None:
         arr1d = phases
-    for r in range(M):
+    for r in range(N):
         string += "\n" if r > 0 else ""
-        for c in range(N):
+        for c in range(M):
             string += " " if c > 0 else ""
-            code = arr1d[remap(4 * r + c)]
+            code = arr1d[remap(M * r + c)]
             # string += f"{int(code * 5.6):3d}"
             string += f"{code:2d}"
     return string
@@ -240,16 +240,16 @@ class Widget(QWidget):
 
             return _groupbox
 
-        for r in range(M):
-            for c in range(N):
-                grid.addWidget(create_single_phase_layout(4 * r + c), r, c)
+        for r in range(N):
+            for c in range(M):
+                grid.addWidget(create_single_phase_layout(M * r + c), r, c)
 
         def updater():
             # set_target_angle(theta_slider.value(), phi_slider.value())
             sim_phases = np.ndarray((4, 4), dtype=float)
-            for r in range(M):
-                for c in range(N):
-                    val = phases[remap(4 * r + c)]
+            for r in range(N):
+                for c in range(M):
+                    val = phases[remap(M * r + c)]
                     sim_phases[r][c] = val * 22.5
                     _dials[4 * r + c].setValue(val)
                     _labels[4 * r + c].setText(f"{val:2}")

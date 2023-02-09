@@ -187,7 +187,7 @@ def process():
                 logging.info(get_logstring())
             command.valid_cmd = CmdType.NOP
             command.running = False
-            
+
             global done_flag
             done_flag = True
 

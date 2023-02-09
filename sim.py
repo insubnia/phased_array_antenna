@@ -52,13 +52,13 @@ rx_plot_objs = [RxPlotObj() for _ in range(3)]
 
 def get_pattern_data_from_target_angle(theta_d, phi_d):
     theta_r, phi_r = np.deg2rad(theta_d), np.deg2rad(phi_d)
+    u0, v0 = u(theta_r, phi_r), v(theta_r, phi_r)
 
     r = np.zeros(np.shape(PHI))
-    for m, xm in enumerate(xms):
-        for n, yn in enumerate(yns):
-            r = r + weights[m][n] * np.exp(1j * k * 1 * (
-                (xm * (u(THETA, PHI) - u(theta_r, phi_r))) +
-                (yn * (v(THETA, PHI) - v(theta_r, phi_r)))
+    for n, yn in enumerate(yns):
+        for m, xm in enumerate(xms):
+            r = r + weights[m][n] * np.exp(1j * (
+                k * (xm * (u(THETA, PHI) - u0) + yn * (v(THETA, PHI) - v0))
             ))
     r = abs(r)
     return r
@@ -67,10 +67,10 @@ def get_pattern_data_from_target_angle(theta_d, phi_d):
 def get_pattern_data_from_phase(phase_d):
     phase = np.deg2rad(phase_d)
     r = np.zeros(np.shape(PHI))
-    for m, xm in enumerate(xms):
-        for n, yn in enumerate(yns):
+    for n, yn in enumerate(yns):
+        for m, xm in enumerate(xms):
             r = r + weights[m][n] * np.exp(1j * (
-                (k * (xm * u(THETA, PHI) + yn * v(THETA, PHI))) +
+                k * (xm * u(THETA, PHI) + yn * v(THETA, PHI)) +
                 phase[m][n]
             ))
     r = abs(r)
@@ -169,7 +169,7 @@ def plot_sim():
     # ax.scatter(X2, Y2, Z2, marker='o', s=30)
     for n in range(N):
         for m in range(M):
-            ax.text(xms[m], yns[n], 0, f"{M * n + 4 - m}", c='g', size=7, ha='center', va='center')
+            ax.text(xms[m], yns[n], 0, f"{M * n + 3 - m}", c='g', size=7, ha='center', va='center')
 
     global text
     text = ax.text(xms[-1] + dx / 2, yns[-1] + dy / 2, 0, "")
