@@ -149,13 +149,14 @@ def update(frame):
 
 def plot_sim():
     fig = plt.figure()
-    fig.suptitle("Beam Pattern", color='slateblue', fontsize=10)
+    fig.subplots_adjust(left=.03, right=.97)
 
     R = get_pattern_data_from_target_angle(0, 0)
     axis_length = np.max(R) * 1.3
 
     global ax
     ax = fig.add_subplot(projection='3d')
+    ax.set_title("Beam Pattern", color='#778899', size=15, weight='bold', va='bottom')
     ax.view_init(elev=110, azim=-105, roll=-15)
 
     ax.plot([0, axis_length], [0, 0], [0, 0], linewidth=1, color='red')
@@ -169,7 +170,7 @@ def plot_sim():
     # ax.scatter(X2, Y2, Z2, marker='o', s=30)
     for n in range(N):
         for m in range(M):
-            ax.text(xms[m], yns[n], 0, f"{M * n + m + 1}", c='g', size=7, ha='center', va='center')
+            ax.text(xms[m], yns[n], 0, f"{M * n + m}", c='g', size=7, ha='center', va='center')
 
     global text
     text = ax.text(xms[-1] + dx / 2, yns[-1] + dy / 2, 0, "")

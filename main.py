@@ -63,7 +63,7 @@ class Command(object):
         self.valid_cmd = CmdType.NOP
         self.running = False
         self.phases = np.zeros(16, dtype=np.uint8)
-    
+
     def set_cmd(self, cmd):
         self.cmd = cmd
         if cmd != CmdType.NOP:
