@@ -7,15 +7,13 @@ import numpy as np
 from PyQt6.QtWidgets import *
 from PyQt6.QtGui import *
 from PyQt6.QtCore import *
-
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 
 from main import process, stream, command, Status, CmdType
 from main import check_done, clear_done, get_measure
-
 from sim import plot_sim, set_phases, set_target_angle, set_rx_coord
 
-
+M, N = 4, 4
 phases = np.zeros(16, dtype=np.int8)
 
 
@@ -36,14 +34,24 @@ def synchronizer():
         time.sleep(0.1)
 
 
-def get_phase_display_string(arr=None, string=""):
-    if arr is None:
-        arr = phases
-    for r in range(4):
+def remap(x):
+    table = (
+        3, 2, 1, 0,
+        7, 6, 5, 4,
+        11, 10, 9, 8,
+        15, 14, 13, 12,
+    )
+    return table[x]
+
+
+def get_phase_display_string(arr1d=None, string=""):
+    if arr1d is None:
+        arr1d = phases
+    for r in range(M):
         string += "\n" if r > 0 else ""
-        for c in range(4):
+        for c in range(N):
             string += " " if c > 0 else ""
-            code = arr[4 * r + c]
+            code = arr1d[remap(4 * r + c)]
             # string += f"{int(code * 5.6):3d}"
             string += f"{code:2d}"
     return string
@@ -206,13 +214,16 @@ class Widget(QWidget):
         _dials = []
         _labels = []
         def create_single_phase_layout(idx):
-            groupbox = QGroupBox(f"Tx {idx}")
-            groupbox.setFlat(True)
-            groupbox.setFixedSize(100, 140)
+            idx = remap(idx)
+            _groupbox = QGroupBox(f"Tx {idx}")
+            _groupbox.setFlat(True)
+            _groupbox.setFixedSize(100, 140)
 
             grid = QGridLayout()
+            _groupbox.setLayout(grid)
 
             dial = QDial()
+            grid.addWidget(dial, 0, 0)
             _dials.append(dial)
             # dial.setRange(0, 64)
             dial.setRange(0, 16)
@@ -220,29 +231,29 @@ class Widget(QWidget):
             dial.setNotchTarget(8)
             dial.setWrapping(True)
             dial.valueChanged.connect(lambda: phases.put(idx, dial.value()))
-            grid.addWidget(dial, 0, 0)
 
             label = QLabel(f"{dial.value()}")
+            grid.addWidget(label, 1, 0)
             _labels.append(label)
             label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             label.setFixedHeight(13)
-            grid.addWidget(label, 1, 0)
 
-            groupbox.setLayout(grid)
-            return groupbox
+            return _groupbox
 
-        for i in range(16):
-            # r, c = 4 - i // 4, 4 - i % 4 - 1
-            r, c = i // 4, 4 - i % 4 - 1
-            grid.addWidget(create_single_phase_layout(i), r, c)
+        for r in range(M):
+            for c in range(N):
+                grid.addWidget(create_single_phase_layout(4 * r + c), r, c)
 
         def updater():
             # set_target_angle(theta_slider.value(), phi_slider.value())
-            set_phases(np.flip(phases).reshape(4, 4) * 22.5)
-            for val, label, dial in zip(phases, _labels, _dials):
-                dial.setValue(val)
-                # label.setText(f"{val * 5.6:.1f}")
-                label.setText(f"{val:2}")
+            sim_phases = np.ndarray((4, 4), dtype=float)
+            for r in range(M):
+                for c in range(N):
+                    val = phases[remap(4 * r + c)]
+                    sim_phases[r][c] = val * 22.5
+                    _dials[4 * r + c].setValue(val)
+                    _labels[4 * r + c].setText(f"{val:2}")
+            set_phases(sim_phases)
         timer = QTimer(self)
         timer.timeout.connect(updater)
         timer.start(100)
@@ -361,9 +372,9 @@ class Widget(QWidget):
                 # 3000:4095 = 0:100
                 min_level, max_level = 3000, 4095
                 x = min(max_level, max(min_level, peri.bat_adc))
-                vbat_percent = int((x - min_level) / (max_level - min_level) * 100)
-                # print(f"{peri.bat_adc} -> {x} -> {vbat_percent}")
-                _vbat_pbars[i].setValue(vbat_percent)
+                vbat_pct = int((x - min_level) / (max_level - min_level) * 100)
+                # print(f"{peri.bat_adc} -> {x} -> {vbat_pct}")
+                _vbat_pbars[i].setValue(vbat_pct)
                 _vbat_labels[i].setText(f"{peri.bat_adc}")
                 _profile_labels[i].setText(get_phase_display_string(peri.phases))
 
