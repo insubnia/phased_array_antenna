@@ -39,12 +39,13 @@ def synchronizer():
 def get_phase_display_string(arr=None, string=""):
     if arr is None:
         arr = phases
-    for r in reversed(range(4)):
-        for c in reversed(range(4)):
+    for r in range(4):
+        string += "\n" if r > 0 else ""
+        for c in range(4):
+            string += " " if c > 0 else ""
             code = arr[4 * r + c]
-            # string += f"{int(code * 5.6):3d}, "
-            string += f"{code:2d}, "
-        string += "\n"
+            # string += f"{int(code * 5.6):3d}"
+            string += f"{code:2d}"
     return string
 
 
@@ -259,14 +260,14 @@ class Widget(QWidget):
         # grid.setHorizontalSpacing(30)
         grid.setVerticalSpacing(15)
 
-        rows = ["RF Level", "Battery\nLevel", "Phase\nProfile(°)", "R(cm)\nθ(°)\nϕ(°)"]
+        rows = ["RF Level", "Battery\nLevel", "Phase\nProfile", "R(cm)\nθ(°)\nϕ(°)"]
         for i, desc in enumerate(rows):
             label = QLabel(desc)
             label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             label.setStyleSheet("font-weight: bold")
             grid.addWidget(label, i + 1, 0)
         for i in range(1, 4):
-            label = QLabel(f"Target {i}")
+            label = QLabel(f"Rx #{i}")
             label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             label.setStyleSheet("font-weight: bold")
             label.setFixedHeight(20)
@@ -408,18 +409,18 @@ class Widget(QWidget):
         # Target Buttons
         hbox1 = QHBoxLayout()
         vbox.addLayout(hbox1)
-        target1_button = QPushButton("Target 1")
+        target1_button = QPushButton("Rx #1")
         target1_button.setStyleSheet(button_stylesheet)
         target1_button.setFixedHeight(50)
         target1_button.clicked.connect(lambda: (command.set_cmd(CmdType.TARGET_1), set_ps(0)))
         hbox1.addWidget(target1_button)
-        target2_button = QPushButton("Target 2")
+        target2_button = QPushButton("Rx #2")
         target2_button.setStyleSheet(button_stylesheet)
         target2_button.font
         target2_button.setFixedHeight(50)
         target2_button.clicked.connect(lambda: (command.set_cmd(CmdType.TARGET_2), set_ps(1)))
         hbox1.addWidget(target2_button)
-        target3_button = QPushButton("Target 3")
+        target3_button = QPushButton("Rx #3")
         target3_button.setStyleSheet(button_stylesheet)
         target3_button.setFixedHeight(50)
         target3_button.clicked.connect(lambda: (command.set_cmd(CmdType.TARGET_3), set_ps(2)))

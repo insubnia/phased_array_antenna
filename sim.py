@@ -19,7 +19,6 @@ dx = wave_length / 2
 dy = wave_length / 2
 xms = np.arange(0.5 - M / 2, M / 2, 1) * dx
 yns = np.arange(0.5 - N / 2, N / 2, 1) * dy
-xms = np.flip(xms)
 yns = np.flip(yns)
 
 # Global Variables
@@ -170,7 +169,7 @@ def plot_sim():
     # ax.scatter(X2, Y2, Z2, marker='o', s=30)
     for n in range(N):
         for m in range(M):
-            ax.text(xms[m], yns[n], 0, f"{M * n + m}", c='g', size=7, ha='center', va='center')
+            ax.text(xms[m], yns[n], 0, f"{M * n + 4 - m}", c='g', size=7, ha='center', va='center')
 
     global text
     text = ax.text(xms[-1] + dx / 2, yns[-1] + dy / 2, 0, "")
