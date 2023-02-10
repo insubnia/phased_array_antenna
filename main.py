@@ -63,6 +63,7 @@ class Command(object):
         self.valid_cmd = CmdType.NOP
         self.running = False
         self.phases = np.zeros(16, dtype=np.uint8)
+        self.loss = 80
 
     def set_cmd(self, cmd):
         self.cmd = cmd
@@ -154,7 +155,8 @@ def process():
         elif stream.status == Status.BUSY:
             server.sock.settimeout(5)
 
-        packed_cmd = command.cmd.to_bytes(1, byteorder="little")
+        packed_cmd = command.cmd.to_bytes(1, byteorder='little')
+        packed_cmd += command.loss.to_bytes(1, byteorder='little')
         packed_cmd += command.phases.tobytes()
         # print(f"send packet {packed_cmd}")
         server.sock.sendto(packed_cmd, server.client_addr)

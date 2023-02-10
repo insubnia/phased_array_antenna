@@ -33,6 +33,7 @@ def synchronizer():
             pass
         # copy stream data to gui data
         command.phases = phases.copy()
+        command.loss = loss
         time.sleep(0.1)
 
 
