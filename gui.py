@@ -139,14 +139,14 @@ class Widget(QWidget):
     def init_ui(self):
         grid = QGridLayout()
 
-        self.phase_group = self.create_phase_group()
-        grid.addWidget(self.phase_group, 0, 1, 2, 1)
+        self.tx_group = self.create_tx_group()
+        grid.addWidget(self.tx_group, 0, 1, 2, 1)
 
-        self.button_group = self.create_button_group()
-        grid.addWidget(self.button_group, 0, 2)
+        self.rx_group = self.create_rx_group()
+        grid.addWidget(self.rx_group, 1, 2)
 
-        self.target_group = self.create_target_group()
-        grid.addWidget(self.target_group, 1, 2)
+        self.cmd_group = self.create_cmd_group()
+        grid.addWidget(self.cmd_group, 0, 2)
 
         console = self.create_console()
         grid.addWidget(console, 2, 1, 1, 2)
@@ -164,19 +164,19 @@ class Widget(QWidget):
 
     def set_mode(self, mode):
         if mode == 0:
-            self.phase_group.setEnabled(True)
-            self.button_group.setEnabled(True)
-            self.target_group.setEnabled(True)
+            self.tx_group.setEnabled(True)
+            self.rx_group.setEnabled(True)
+            self.cmd_group.setEnabled(True)
         elif mode == 1:
-            self.phase_group.setEnabled(False)
-            self.button_group.setEnabled(False)
-            self.target_group.setEnabled(True)
+            self.tx_group.setEnabled(False)
+            self.rx_group.setEnabled(True)
+            self.cmd_group.setEnabled(False)
         elif mode == 2:
-            self.phase_group.setEnabled(False)
-            self.button_group.setEnabled(False)
-            self.target_group.setEnabled(False)
+            self.tx_group.setEnabled(False)
+            self.rx_group.setEnabled(False)
+            self.cmd_group.setEnabled(False)
 
-    def create_phase_group(self):
+    def create_tx_group(self):
         groupbox = QGroupBox("Tx System")
         groupbox.setStyleSheet(self.groupbox_stylesheet)
         groupbox.setFont(self.groupbox_font)
@@ -268,7 +268,7 @@ class Widget(QWidget):
 
         return groupbox
 
-    def create_target_group(self):
+    def create_rx_group(self):
         groupbox = QGroupBox("Rx System")
         groupbox.setStyleSheet(self.groupbox_stylesheet)
         groupbox.setFont(self.groupbox_font)
@@ -392,7 +392,7 @@ class Widget(QWidget):
 
         return groupbox
 
-    def create_button_group(self):
+    def create_cmd_group(self):
         groupbox = QGroupBox("Commands")
         groupbox.setStyleSheet(self.groupbox_stylesheet)
         groupbox.setFont(self.groupbox_font)
