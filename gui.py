@@ -190,7 +190,7 @@ class Widget(QWidget):
         """ DSA
         """
         dsa_groupbox = QGroupBox("DSA")
-        grid.addWidget(dsa_groupbox, 5, 0)
+        grid.addWidget(dsa_groupbox, 0, 0)
         dsa_groupbox.setFlat(True)
 
         hbox0 = QHBoxLayout()
@@ -211,12 +211,12 @@ class Widget(QWidget):
             dsa_label.setText(f"{val * 0.25:.2f} dB")
             loss = -val
         dsa_slider.valueChanged.connect(dsa_changed)
-        dsa_slider.setValue(-80)
+        dsa_slider.setValue(-loss)
 
         """ THETA
         """
         vbox1 = QVBoxLayout()
-        grid.addLayout(vbox1, 5, 1)
+        grid.addLayout(vbox1, 0, 1)
         theta_label = QLabel()
         theta_slider = QSlider(orientation=Qt.Orientation.Horizontal)
         theta_slider.setRange(-90, 90)
@@ -231,7 +231,7 @@ class Widget(QWidget):
         """ PHI
         """
         vbox2 = QVBoxLayout()
-        grid.addLayout(vbox2, 5, 2)
+        grid.addLayout(vbox2, 0, 2)
         phi_slider = QSlider(orientation=Qt.Orientation.Horizontal)
         phi_slider.setRange(-180, 180)
         phi_slider.setSingleStep(10)
@@ -248,10 +248,9 @@ class Widget(QWidget):
         QShortcut(QKeySequence('j'), self, lambda: phi_slider.setValue(phi_slider.value() - 5))
         QShortcut(QKeySequence('k'), self, lambda: phi_slider.setValue(phi_slider.value() + 5))
 
-        _dials = []
-        _labels = []
-        def create_single_phase_layout(idx):
-            idx = remap(idx)
+        phase_dials = np.ndarray((esa.N, esa.M), dtype='O')
+        def create_single_phase_layout(r, c):
+            idx = remap(esa.M * r + c)
             _groupbox = QGroupBox(f"Tx {idx}")
             _groupbox.setFlat(True)
             _groupbox.setFixedSize(100, 140)
@@ -259,27 +258,29 @@ class Widget(QWidget):
             grid = QGridLayout()
             _groupbox.setLayout(grid)
 
+            label = QLabel()
+            grid.addWidget(label, 1, 0)
+            label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            label.setFixedHeight(13)
+
             dial = QDial()
             grid.addWidget(dial, 0, 0)
-            _dials.append(dial)
-            # dial.setRange(0, 64)
+            phase_dials[r][c] = dial
             dial.setRange(0, 16)
             dial.setNotchesVisible(True)
             dial.setNotchTarget(8)
             dial.setWrapping(True)
-            dial.valueChanged.connect(lambda: phases.put(idx, dial.value()))
-
-            label = QLabel(f"{dial.value()}")
-            grid.addWidget(label, 1, 0)
-            _labels.append(label)
-            label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            label.setFixedHeight(13)
+            def phase_changed():
+                label.setText(f"{dial.value():2}")
+                phases.put(idx, dial.value())
+            dial.valueChanged.connect(phase_changed)
+            phase_changed()
 
             return _groupbox
 
         for r in range(esa.N):
             for c in range(esa.M):
-                grid.addWidget(create_single_phase_layout(esa.M * r + c), r, c)
+                grid.addWidget(create_single_phase_layout(r, c), r + 1, c)
 
         def updater():
             # set_target_angle(theta_slider.value(), phi_slider.value())
@@ -288,9 +289,8 @@ class Widget(QWidget):
             for r in range(esa.N):
                 for c in range(esa.M):
                     val = phases[remap(esa.M * r + c)]
+                    phase_dials[r][c].setValue(val)
                     sim_phases[r][c] = val * 22.5
-                    _dials[4 * r + c].setValue(val)
-                    _labels[4 * r + c].setText(f"{val:2}")
             set_phases(sim_phases)
         timer = QTimer(self)
         timer.timeout.connect(updater)
