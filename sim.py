@@ -140,7 +140,7 @@ def update(frame):
     if surf:
         surf.remove()
     surf = ax.plot_surface(X, Y, Z, cmap=plt.get_cmap('jet'),
-                           alpha=0.3, linewidth=0.1, rstride=1, cstride=1, antialiased=True)
+                           alpha=0.3, linewidth=0.1, rstride=1, cstride=1, aa=True)
     # text.set_text(f"θ: {theta0}° \nϕ: {phi0}°")
 
     plot_receivers()
