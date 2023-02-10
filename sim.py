@@ -50,6 +50,18 @@ rx_plot_objs = [RxPlotObj() for _ in range(3)]
 # rx_coords = np.array(((150, 45, 120), (150, 0, 0), (150, 45, 0)))
 
 
+class Esa():
+    M, N = 4, 4
+
+    def __init__(self):
+        return
+
+    @classmethod
+    def set_amplitude(cls, ampl):
+        cls.A = ampl
+        weights.fill(cls.A)
+
+
 def get_pattern_data_from_target_angle(theta_d, phi_d):
     theta_r, phi_r = np.deg2rad(theta_d), np.deg2rad(phi_d)
     u0, v0 = u(theta_r, phi_r), v(theta_r, phi_r)
@@ -79,7 +91,7 @@ def get_pattern_data_from_phase(phase_d):
 
 def get_desired_phase(theta_d, phi_d):
     theta_r, phi_r = np.deg2rad(theta_d), np.deg2rad(phi_d)
-    phase_d = np.ndarray((M, N))
+    phase_d = np.ndarray((N, M))
     for m, xm in enumerate(xms):
         for n, yn in enumerate(yns):
             cmpx = np.exp(-1j * k * (xm * u(theta_r, phi_r) + yn * v(theta_r, phi_r)))

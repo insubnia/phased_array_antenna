@@ -11,10 +11,12 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 
 from main import process, stream, command, Status, CmdType
 from main import check_done, clear_done, get_measure
-from sim import plot_sim, set_phases, set_target_angle, set_rx_coord
+from sim import Esa, plot_sim, set_phases, set_target_angle, set_rx_coord
 
-M, N = 4, 4
 phases = np.zeros(16, dtype=np.int8)
+loss = 80
+
+esa = Esa()
 
 
 def resource_path(relative_path):
@@ -55,11 +57,11 @@ def remap(x):
 def get_phase_display_string(arr1d=None, string=""):
     if arr1d is None:
         arr1d = phases
-    for r in range(N):
+    for r in range(esa.N):
         string += "\n" if r > 0 else ""
-        for c in range(M):
+        for c in range(esa.M):
             string += " " if c > 0 else ""
-            code = arr1d[remap(M * r + c)]
+            code = arr1d[remap(esa.M * r + c)]
             # string += f"{int(code * 5.6):3d}"
             string += f"{code:2d}"
     return string
@@ -180,12 +182,41 @@ class Widget(QWidget):
         groupbox = QGroupBox("Tx System")
         groupbox.setStyleSheet(self.groupbox_stylesheet)
         groupbox.setFont(self.groupbox_font)
-        groupbox.setFixedSize(430, 650)
+        groupbox.setFixedSize(430, 720)
 
         grid = QGridLayout()
         groupbox.setLayout(grid)
 
+        """ DSA
+        """
+        dsa_groupbox = QGroupBox("DSA")
+        grid.addWidget(dsa_groupbox, 5, 0)
+        dsa_groupbox.setFlat(True)
+
+        hbox0 = QHBoxLayout()
+        dsa_groupbox.setLayout(hbox0)
+        dsa_label = QLabel()
+        hbox0.addWidget(dsa_label)
+        dsa_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        dsa_label.setStyleSheet("font-size: 8pt;")
+        dsa_slider = QSlider()
+        hbox0.addWidget(dsa_slider)
+        dsa_slider.setFixedHeight(75)
+        dsa_slider.setRange(-127, 0)
+        # dsa_slider.setInvertedAppearance(True)
+        def dsa_changed():
+            global loss
+            val = dsa_slider.value()
+            esa.set_amplitude(4 + 6 * (127 + val) / 127)
+            dsa_label.setText(f"{val * 0.25:.2f} dB")
+            loss = -val
+        dsa_slider.valueChanged.connect(dsa_changed)
+        dsa_slider.setValue(-80)
+
+        """ THETA
+        """
         vbox1 = QVBoxLayout()
+        grid.addLayout(vbox1, 5, 1)
         theta_label = QLabel()
         theta_slider = QSlider(orientation=Qt.Orientation.Horizontal)
         theta_slider.setRange(-90, 90)
@@ -196,9 +227,11 @@ class Widget(QWidget):
         theta_slider.valueChanged.connect(lambda: theta_label.setText(f"θ: {theta_slider.value():3}°"))
         vbox1.addWidget(theta_slider)
         vbox1.addWidget(theta_label)
-        grid.addLayout(vbox1, 5, 0)
 
+        """ PHI
+        """
         vbox2 = QVBoxLayout()
+        grid.addLayout(vbox2, 5, 2)
         phi_slider = QSlider(orientation=Qt.Orientation.Horizontal)
         phi_slider.setRange(-180, 180)
         phi_slider.setSingleStep(10)
@@ -209,13 +242,9 @@ class Widget(QWidget):
         phi_slider.valueChanged.connect(lambda: phi_label.setText(f"ϕ: {phi_slider.value():3}°"))
         vbox2.addWidget(phi_slider)
         vbox2.addWidget(phi_label)
-        grid.addLayout(vbox2, 5, 1)
 
-        # FIXME: delete later
-        # theta_slider.setValue(20)
         QShortcut(QKeySequence('h'), self, lambda: theta_slider.setValue(theta_slider.value() - 5))
         QShortcut(QKeySequence('l'), self, lambda: theta_slider.setValue(theta_slider.value() + 5))
-        # phi_slider.setValue(30)
         QShortcut(QKeySequence('j'), self, lambda: phi_slider.setValue(phi_slider.value() - 5))
         QShortcut(QKeySequence('k'), self, lambda: phi_slider.setValue(phi_slider.value() + 5))
 
@@ -248,16 +277,17 @@ class Widget(QWidget):
 
             return _groupbox
 
-        for r in range(N):
-            for c in range(M):
-                grid.addWidget(create_single_phase_layout(M * r + c), r, c)
+        for r in range(esa.N):
+            for c in range(esa.M):
+                grid.addWidget(create_single_phase_layout(esa.M * r + c), r, c)
 
         def updater():
             # set_target_angle(theta_slider.value(), phi_slider.value())
-            sim_phases = np.ndarray((4, 4), dtype=float)
-            for r in range(N):
-                for c in range(M):
-                    val = phases[remap(M * r + c)]
+            dsa_slider.setValue(-loss)
+            sim_phases = np.ndarray((esa.N, esa.M), dtype=float)
+            for r in range(esa.N):
+                for c in range(esa.M):
+                    val = phases[remap(esa.M * r + c)]
                     sim_phases[r][c] = val * 22.5
                     _dials[4 * r + c].setValue(val)
                     _labels[4 * r + c].setText(f"{val:2}")
@@ -276,7 +306,6 @@ class Widget(QWidget):
 
         grid = QGridLayout()
         groupbox.setLayout(grid)
-        # grid.setHorizontalSpacing(30)
         grid.setVerticalSpacing(15)
 
         rows = ["RF Level", "Battery\nLevel", "Phase\nProfile", "R(cm)\nθ(°)\nϕ(°)"]
