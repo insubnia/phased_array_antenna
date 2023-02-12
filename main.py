@@ -48,7 +48,7 @@ class Stream(object):
 
         class PeriInfo(object):
             def __init__(self):
-                self.address = None
+                self.address = np.zeros(6, dtype=np.uint8)
                 self.connected = False
                 self.rfdc_adc, self.bat_adc = 0, 0
                 self.phases = np.zeros(16, dtype=np.int8)
@@ -146,7 +146,7 @@ def process():
         header_row += f", ps#{i}"
     for i in range(16):
         header_row += f", range#{i}"
-    header_row += f", CCP(uW), Scanning Rate(ms), TOPS/W"
+    header_row += ", CCP(uW), Scanning Rate(ms), TOPS/W"
     logging.info(f"{header_row}\n")
 
     while True:
@@ -155,11 +155,11 @@ def process():
         elif stream.status == Status.BUSY:
             server.sock.settimeout(5)
 
-        packed_cmd = command.cmd.to_bytes(1, byteorder='little')
-        packed_cmd += command.loss.to_bytes(1, byteorder='little')
-        packed_cmd += command.phases.tobytes()
-        # print(f"send packet {packed_cmd}")
-        server.sock.sendto(packed_cmd, server.client_addr)
+        cmds = np.zeros(64, dtype=np.uint8)
+        cmds.put(0, command.cmd)
+        cmds.put(1, command.loss)
+        cmds.put(range(8, 8 + len(command.phases)), command.phases)
+        server.sock.sendto(cmds.tobytes(), server.client_addr)
         command.cmd = CmdType.NOP
 
         try:
@@ -173,17 +173,17 @@ def process():
         stream.curr_phases = np.frombuffer(data[4:20], dtype=np.int8)
         o = 128
         for i, peri in enumerate(stream.peri_infos):
-            peri.address = np.frombuffer(data[o:o+6], dtype=np.uint8)
-            peri.rfdc_adc, peri.bat_adc = np.frombuffer(data[o+8:o+12], dtype=np.uint16)
-            peri.phases = np.frombuffer(data[o+12: o+28], dtype=np.int8)
-            peri.rfdc_ranges = np.frombuffer(data[o+28: o+60], dtype=np.uint16)
+            peri.address = np.frombuffer(data[o: o + 6], dtype=np.uint8)
+            peri.rfdc_adc, peri.bat_adc = np.frombuffer(data[o + 8: o + 12], dtype=np.uint16)
+            peri.phases = np.frombuffer(data[o + 12: o + 28], dtype=np.int8)
+            peri.rfdc_ranges = np.frombuffer(data[o + 28: o + 60], dtype=np.uint16)
             o += 128
 
         # Command processing
         # print(f"cmd: {command.cmd} | valid cmd: {command.valid_cmd} | running: {command.running} | status: {stream.status}")
         if command.valid_cmd != CmdType.NOP and stream.status == Status.BUSY:
             command.running = True
-        if command.running == True and stream.status == Status.READY:
+        if command.running is True and stream.status == Status.READY:
             # if command.valid_cmd in [CmdType.SCAN, CmdType.TARGET_1, CmdType.TARGET_2, CmdType.TARGET_3]:
             if command.valid_cmd in [CmdType.TARGET_1, CmdType.TARGET_2, CmdType.TARGET_3]:
                 logging.info(get_logstring())
