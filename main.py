@@ -64,6 +64,7 @@ class Command(object):
         self.running = False
         self.phases = np.zeros(16, dtype=np.uint8)
         self.loss = 80
+        self.peri_mode = 1
 
     def set_cmd(self, cmd):
         self.cmd = cmd
@@ -158,6 +159,7 @@ def process():
         cmds = np.zeros(64, dtype=np.uint8)
         cmds.put(0, command.cmd)
         cmds.put(1, command.loss)
+        cmds.put(2, command.peri_mode)
         cmds.put(range(8, 8 + len(command.phases)), command.phases)
         server.sock.sendto(cmds.tobytes(), server.client_addr)
         command.cmd = CmdType.NOP

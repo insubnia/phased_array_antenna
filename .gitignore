@@ -1,3 +1,4 @@
+*.csv
 *.pyc
 .flake8
 pyrightconfig.json
