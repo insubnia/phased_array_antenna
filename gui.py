@@ -375,7 +375,6 @@ class Widget(QWidget):
             vbox2.addWidget(pbar)
             _vbat_pbars.append(pbar)
             pbar.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            # pbar.setFixedWidth(120)
             pbar.setMinimumSize(60, 10)
             pbar.setTextVisible(True)
 
@@ -464,35 +463,25 @@ class Widget(QWidget):
         hbox0 = QHBoxLayout()
         vbox.addLayout(hbox0)
         scan_button = QPushButton("Scan")
+        hbox0.addWidget(scan_button)
         scan_button.setStyleSheet(button_stylesheet)
         scan_button.setFixedHeight(50)
         scan_button.clicked.connect(lambda: command.set_cmd(CmdType.SCAN))
-        hbox0.addWidget(scan_button)
         clear_button = QPushButton("Reset")
+        hbox0.addWidget(clear_button)
         clear_button.setStyleSheet(button_stylesheet)
         clear_button.setFixedHeight(50)
         clear_button.clicked.connect(lambda: (command.set_cmd(CmdType.RESET), phases.fill(0)))
-        hbox0.addWidget(clear_button)
 
-        # Target Buttons
         hbox1 = QHBoxLayout()
         vbox.addLayout(hbox1)
-        target1_button = QPushButton("Rx #1")
-        target1_button.setStyleSheet(button_stylesheet)
-        target1_button.setFixedHeight(50)
-        target1_button.clicked.connect(lambda: (command.set_cmd(CmdType.TARGET_1), set_ps(0)))
-        hbox1.addWidget(target1_button)
-        target2_button = QPushButton("Rx #2")
-        target2_button.setStyleSheet(button_stylesheet)
-        target2_button.font
-        target2_button.setFixedHeight(50)
-        target2_button.clicked.connect(lambda: (command.set_cmd(CmdType.TARGET_2), set_ps(1)))
-        hbox1.addWidget(target2_button)
-        target3_button = QPushButton("Rx #3")
-        target3_button.setStyleSheet(button_stylesheet)
-        target3_button.setFixedHeight(50)
-        target3_button.clicked.connect(lambda: (command.set_cmd(CmdType.TARGET_3), set_ps(2)))
-        hbox1.addWidget(target3_button)
+        for i in range(3):
+            button = QPushButton(f"Rx #{i + 1}")
+            hbox1.addWidget(button)
+            button.setStyleSheet(button_stylesheet)
+            button.setFixedHeight(50)
+            button.clicked.connect(lambda: (command.set_cmd(CmdType.TARGET_1 + i), set_ps(i)))
+            button.setShortcut(f'Ctrl+{i + 1}')
 
         return groupbox
 
