@@ -217,7 +217,7 @@ class Widget(QWidget):
         """ THETA
         """
         vbox1 = QVBoxLayout()
-        grid.addLayout(vbox1, 0, 1)
+        # grid.addLayout(vbox1, 0, 1)
         theta_label = QLabel()
         theta_slider = QSlider(orientation=Qt.Orientation.Horizontal)
         theta_slider.setRange(-90, 90)
@@ -232,7 +232,7 @@ class Widget(QWidget):
         """ PHI
         """
         vbox2 = QVBoxLayout()
-        grid.addLayout(vbox2, 0, 2)
+        # grid.addLayout(vbox2, 0, 2)
         phi_slider = QSlider(orientation=Qt.Orientation.Horizontal)
         phi_slider.setRange(-180, 180)
         phi_slider.setSingleStep(10)
@@ -249,6 +249,25 @@ class Widget(QWidget):
         QShortcut(QKeySequence('j'), self, lambda: phi_slider.setValue(phi_slider.value() - 5))
         QShortcut(QKeySequence('k'), self, lambda: phi_slider.setValue(phi_slider.value() + 5))
 
+        """ Global peripheral mode combobox
+        """
+        vbox3 = QVBoxLayout()
+        grid.addLayout(vbox3, 0, 3)
+        mode_label = QLabel("Peripheral mode")
+        vbox3.addWidget(mode_label)
+        mode_label.setFixedHeight(20)
+        mode_combobox = QComboBox()
+        vbox3.addWidget(mode_combobox)
+        mode_combobox.setFixedHeight(25)
+        mode_combobox.addItems(["Charging", "Scanning"])
+        mode_combobox.setCurrentIndex(1)
+        def combobox_changed():
+            command.peri_mode = mode_combobox.currentIndex()
+        mode_combobox.currentIndexChanged.connect(combobox_changed)
+        vbox3.addWidget(QLabel())  # dummy for layout
+
+        """ Phase dials
+        """
         phase_dials = np.ndarray((esa.N, esa.M), dtype='O')
         def create_single_phase_layout(r, c):
             idx = remap(esa.M * r + c)
