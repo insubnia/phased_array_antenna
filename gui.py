@@ -92,6 +92,7 @@ class Window(QMainWindow):
                 pass
             command.phases = phases.copy()  # copy stream data to gui data
             command.loss = loss
+            # print(command.phases)
             for i, v in enumerate(stream.peri_infos):
                 pos = v.position
                 set_rx_coord(i, pos)
@@ -107,7 +108,7 @@ class Window(QMainWindow):
             if check_done():
                 clear_done()
                 ccp, scanning_rate, tops_p_watt = get_measure()
-                self.widget.te.append(f"MCP: {ccp}uA/MHz  |  Scanning Rate: {scanning_rate:5.2f}ms  |  TOPS/W: {tops_p_watt:.3f}")
+                # self.widget.te.append(f"MCP: {ccp}uA/MHz  |  Scanning Rate: {scanning_rate:5.2f}ms  |  TOPS/W: {tops_p_watt:.3f}")
 
         timer = QTimer(self)
         timer.timeout.connect(synchronizer)
@@ -266,18 +267,19 @@ class Widget(QWidget):
             label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             label.setFixedHeight(13)
 
-            dial = QDial()
+            dial = phase_dials[r][c] = QDial()
             grid.addWidget(dial, 0, 0)
-            phase_dials[r][c] = dial
-            dial.setRange(0, 16)
             dial.setNotchesVisible(True)
-            dial.setNotchTarget(8)
             dial.setWrapping(True)
-            def phase_changed():
+            dial.setRange(0, 16)
+            def dial_changed():
+                if dial.value() == 16:
+                    dial.setValue(0)
+                    return
                 label.setText(f"{dial.value():2}")
                 phases.put(idx, dial.value())
-            dial.valueChanged.connect(phase_changed)
-            phase_changed()
+            dial.valueChanged.connect(dial_changed)
+            dial_changed()
 
             return _groupbox
 
@@ -455,6 +457,7 @@ class Widget(QWidget):
         def target_button_clicked(i):
             command.set_cmd(CmdType.TARGET_1 + i)
             phases.put(range(0, 16), stream.peri_infos[i].phases)
+            np.place(phases, phases < 0, 0)
 
         for i in range(3):
             button = QPushButton(f"Rx #{i + 1}")
