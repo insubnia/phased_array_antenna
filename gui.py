@@ -4,6 +4,7 @@ import sys
 import time
 import threading
 import numpy as np
+from functools import partial
 from PyQt6.QtWidgets import *
 from PyQt6.QtGui import *
 from PyQt6.QtCore import *
@@ -88,8 +89,6 @@ class Window(QMainWindow):
         statusbar = self.statusBar()
         statusbar.showMessage("Ready")
 
-        # self.setFixedSize(1050, 700)
-
         streamer = threading.Thread(target=process)
         streamer.daemon = True
         streamer.start()
@@ -108,7 +107,7 @@ class Window(QMainWindow):
             if check_done():
                 clear_done()
                 ccp, scanning_rate, tops_p_watt = get_measure()
-                self.widget.qe.append(f"MCP: {ccp}uA/MHz  |  Scanning Rate: {scanning_rate:5.2f}ms  |  TOPS/W: {tops_p_watt:.3f}")
+                self.widget.te.append(f"MCP: {ccp}uA/MHz  |  Scanning Rate: {scanning_rate:5.2f}ms  |  TOPS/W: {tops_p_watt:.3f}")
 
             if stream.status == Status.READY:
                 self.widget.set_mode(0)
@@ -131,33 +130,27 @@ class Widget(QWidget):
         self.setStyleSheet("""
                            background-color: ghostwhite;
                            """)
-        self.groupbox_stylesheet = """
-        color: LightSlateGrey;
-        """
         self.groupbox_font = QFont()
         self.groupbox_font.setPointSize(15)
         self.groupbox_font.setBold(True)
+        self.groupbox_ss = 'color: LightSlateGrey;'
         self.init_ui()
 
     def init_ui(self):
         grid = QGridLayout()
+        self.setLayout(grid)
 
         self.tx_group = self.create_tx_group()
         grid.addWidget(self.tx_group, 0, 1, 2, 1)
-
         self.rx_group = self.create_rx_group()
         grid.addWidget(self.rx_group, 1, 2)
-
         self.cmd_group = self.create_cmd_group()
         grid.addWidget(self.cmd_group, 0, 2)
 
+        canvas = self.create_canvas()
+        grid.addWidget(canvas, 0, 0, 3, 1)
         console = self.create_console()
         grid.addWidget(console, 2, 1, 1, 2)
-
-        self.canvas = self.create_canvas()
-        grid.addWidget(self.canvas, 0, 0, 3, 1)
-
-        self.setLayout(grid)
 
     def create_canvas(self):
         fig = plot_sim()
@@ -181,7 +174,7 @@ class Widget(QWidget):
 
     def create_tx_group(self):
         groupbox = QGroupBox("Tx System")
-        groupbox.setStyleSheet(self.groupbox_stylesheet)
+        groupbox.setStyleSheet(self.groupbox_ss)
         groupbox.setFont(self.groupbox_font)
         groupbox.setFixedSize(430, 720)
 
@@ -234,15 +227,15 @@ class Widget(QWidget):
         vbox2 = QVBoxLayout()
         # grid.addLayout(vbox2, 0, 2)
         phi_slider = QSlider(orientation=Qt.Orientation.Horizontal)
+        vbox2.addWidget(phi_slider)
         phi_slider.setRange(-180, 180)
         phi_slider.setSingleStep(10)
         phi_label = QLabel()
+        vbox2.addWidget(phi_label)
         phi_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         phi_label.setMaximumHeight(15)
         phi_label.setText(f"ϕ: {phi_slider.value():3}°")
         phi_slider.valueChanged.connect(lambda: phi_label.setText(f"ϕ: {phi_slider.value():3}°"))
-        vbox2.addWidget(phi_slider)
-        vbox2.addWidget(phi_label)
 
         QShortcut(QKeySequence('h'), self, lambda: theta_slider.setValue(theta_slider.value() - 5))
         QShortcut(QKeySequence('l'), self, lambda: theta_slider.setValue(theta_slider.value() + 5))
@@ -320,7 +313,7 @@ class Widget(QWidget):
 
     def create_rx_group(self):
         groupbox = QGroupBox("Rx System")
-        groupbox.setStyleSheet(self.groupbox_stylesheet)
+        groupbox.setStyleSheet(self.groupbox_ss)
         groupbox.setFont(self.groupbox_font)
         groupbox.setFixedSize(430, 470)
 
@@ -442,59 +435,57 @@ class Widget(QWidget):
 
     def create_cmd_group(self):
         groupbox = QGroupBox("Commands")
-        groupbox.setStyleSheet(self.groupbox_stylesheet)
+        groupbox.setStyleSheet(self.groupbox_ss)
         groupbox.setFont(self.groupbox_font)
         groupbox.setFixedSize(430, 160)
         groupbox.setFlat(True)
 
-        def set_ps(idx):
-            global phases
-            phases = stream.peri_infos[idx].phases.copy()
-
         vbox = QVBoxLayout()
         groupbox.setLayout(vbox)
 
-        button_stylesheet = """
-        font-size: 11pt;
-        font-style: italic;
-        """
+        btn_ss = 'font-size: 11pt; font-style: italic;'
 
         # Action Buttons
         hbox0 = QHBoxLayout()
         vbox.addLayout(hbox0)
         scan_button = QPushButton("Scan")
         hbox0.addWidget(scan_button)
-        scan_button.setStyleSheet(button_stylesheet)
+        scan_button.setStyleSheet(btn_ss)
         scan_button.setFixedHeight(50)
         scan_button.clicked.connect(lambda: command.set_cmd(CmdType.SCAN))
         clear_button = QPushButton("Reset")
         hbox0.addWidget(clear_button)
-        clear_button.setStyleSheet(button_stylesheet)
+        clear_button.setStyleSheet(btn_ss)
         clear_button.setFixedHeight(50)
         clear_button.clicked.connect(lambda: (command.set_cmd(CmdType.RESET), phases.fill(0)))
 
         hbox1 = QHBoxLayout()
         vbox.addLayout(hbox1)
+
+        def target_button_clicked(i):
+            command.set_cmd(CmdType.TARGET_1 + i)
+            phases.put(range(0, 16), stream.peri_infos[i].phases)
+
         for i in range(3):
             button = QPushButton(f"Rx #{i + 1}")
             hbox1.addWidget(button)
-            button.setStyleSheet(button_stylesheet)
+            button.setStyleSheet(btn_ss)
             button.setFixedHeight(50)
-            button.clicked.connect(lambda: (command.set_cmd(CmdType.TARGET_1 + i), set_ps(i)))
+            button.clicked.connect(partial(target_button_clicked, i))
             button.setShortcut(f'Ctrl+{i + 1}')
 
         return groupbox
 
     def create_console(self):
         groupbox = QGroupBox("Log")
-        groupbox.setStyleSheet(self.groupbox_stylesheet)
+        groupbox.setStyleSheet(self.groupbox_ss)
         groupbox.setFont(self.groupbox_font)
         groupbox.setMinimumSize(500, 150)
 
-        layout = QVBoxLayout()
-        self.qe = QTextEdit(readOnly=True)
-        layout.addWidget(self.qe)
-        groupbox.setLayout(layout)
+        hbox0 = QVBoxLayout()
+        groupbox.setLayout(hbox0)
+        self.te = QTextEdit(readOnly=True)
+        hbox0.addWidget(self.te)
         return groupbox
 
 
