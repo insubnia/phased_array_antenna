@@ -28,16 +28,6 @@ def resource_path(relative_path):
     return os.path.join(base_path, relative_path)
 
 
-def synchronizer():
-    while True:
-        if stream.status == Status.NO_CONN:
-            pass
-        # copy stream data to gui data
-        command.phases = phases.copy()
-        command.loss = loss
-        time.sleep(0.1)
-
-
 def remap(x):
     """
     table = (
@@ -79,35 +69,32 @@ class Window(QMainWindow):
         self.init_ui()
 
     def init_ui(self):
-        QShortcut(QKeySequence('Ctrl+Q'), self, self.close)
-        QShortcut(QKeySequence('Ctrl+W'), self, self.close)
-
         self.setWindowTitle("WPT Visualizer")
         self.setMinimumWidth(1400)
         self.setCentralWidget(self.widget)
-
-        statusbar = self.statusBar()
-        statusbar.showMessage("Ready")
+        QShortcut(QKeySequence('Ctrl+Q'), self, self.close)
+        QShortcut(QKeySequence('Ctrl+W'), self, self.close)
 
         streamer = threading.Thread(target=process)
         streamer.daemon = True
         streamer.start()
-
         time.sleep(0.5)
 
-        updater = threading.Thread(target=synchronizer)
-        updater.daemon = True
-        updater.start()
+        self.init_updater()
+        self.show()
 
-        def updater():
+    def init_updater(self):
+        statusbar = self.statusBar()
+        statusbar.showMessage("Ready")
+
+        def synchronizer():
+            if stream.status == Status.NO_CONN:
+                pass
+            command.phases = phases.copy()  # copy stream data to gui data
+            command.loss = loss
             for i, v in enumerate(stream.peri_infos):
                 pos = v.position
                 set_rx_coord(i, pos)
-
-            if check_done():
-                clear_done()
-                ccp, scanning_rate, tops_p_watt = get_measure()
-                self.widget.te.append(f"MCP: {ccp}uA/MHz  |  Scanning Rate: {scanning_rate:5.2f}ms  |  TOPS/W: {tops_p_watt:.3f}")
 
             if stream.status == Status.READY:
                 self.widget.set_mode(0)
@@ -117,11 +104,14 @@ class Window(QMainWindow):
                 self.widget.set_mode(2)
             statusbar.showMessage(Status.string_by_val(stream.status))
 
-        timer = QTimer(self)
-        timer.timeout.connect(updater)
-        timer.start(100)
+            if check_done():
+                clear_done()
+                ccp, scanning_rate, tops_p_watt = get_measure()
+                self.widget.te.append(f"MCP: {ccp}uA/MHz  |  Scanning Rate: {scanning_rate:5.2f}ms  |  TOPS/W: {tops_p_watt:.3f}")
 
-        self.show()
+        timer = QTimer(self)
+        timer.timeout.connect(synchronizer)
+        timer.start(50)
 
 
 class Widget(QWidget):
