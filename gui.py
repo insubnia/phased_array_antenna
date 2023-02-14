@@ -197,6 +197,10 @@ class Widget(QWidget):
             loss = -val
         dsa_slider.valueChanged.connect(dsa_changed)
         dsa_slider.setValue(-loss)
+        QShortcut(QKeySequence('['), self, lambda: dsa_slider.setValue(dsa_slider.value() + 1))
+        QShortcut(QKeySequence(']'), self, lambda: dsa_slider.setValue(dsa_slider.value() - 1))
+        QShortcut(QKeySequence('{'), self, lambda: dsa_slider.setValue(dsa_slider.value() + 4))
+        QShortcut(QKeySequence('}'), self, lambda: dsa_slider.setValue(dsa_slider.value() - 4))
 
         """ THETA
         """
@@ -465,7 +469,7 @@ class Widget(QWidget):
             button.setStyleSheet(btn_ss)
             button.setFixedHeight(50)
             button.clicked.connect(partial(target_button_clicked, i))
-            button.setShortcut(f'Ctrl+{i + 1}')
+            button.setShortcut(f'{i + 1}')
 
         return groupbox
 
