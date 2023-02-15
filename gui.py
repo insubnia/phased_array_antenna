@@ -52,7 +52,6 @@ def get_phase_display_string(arr1d=None, string=""):
         for c in range(esa.M):
             string += " " if c > 0 else ""
             code = arr1d[remap(esa.M * r + c)]
-            # string += f"{int(code * 5.6):3d}"
             string += f"{code:2d}"
     return string
 
@@ -123,10 +122,6 @@ class Widget(QWidget):
         self.setStyleSheet("""
                            background-color: ghostwhite;
                            """)
-        self.groupbox_font = QFont()
-        self.groupbox_font.setPointSize(15)
-        self.groupbox_font.setBold(True)
-        self.groupbox_ss = 'color: LightSlateGrey;'
         self.init_ui()
 
     def init_ui(self):
@@ -143,6 +138,14 @@ class Widget(QWidget):
         grid.addWidget(self.create_canvas(), 0, 0, 3, 1)
         grid.addWidget(self.create_console(), 2, 1, 1, 2)
 
+    def style_groupbox(self, groupbox):
+        groupbox_font = QFont()
+        groupbox_font.setPointSize(15)
+        groupbox_font.setBold(True)
+        groupbox_ss = 'color: LightSlateGrey;'
+        groupbox.setFont(groupbox_font)
+        groupbox.setStyleSheet(groupbox_ss)
+
     def create_canvas(self):
         fig = plot_sim()
         canvas = FigureCanvas(fig)
@@ -151,9 +154,8 @@ class Widget(QWidget):
 
     def create_tx_group(self):
         groupbox = QGroupBox("Tx System")
-        groupbox.setStyleSheet(self.groupbox_ss)
-        groupbox.setFont(self.groupbox_font)
         groupbox.setFixedSize(430, 720)
+        self.style_groupbox(groupbox)
 
         grid = QGridLayout()
         groupbox.setLayout(grid)
@@ -295,9 +297,8 @@ class Widget(QWidget):
 
     def create_rx_group(self):
         groupbox = QGroupBox("Rx System")
-        groupbox.setStyleSheet(self.groupbox_ss)
-        groupbox.setFont(self.groupbox_font)
         groupbox.setFixedSize(430, 470)
+        self.style_groupbox(groupbox)
 
         grid = QGridLayout()
         groupbox.setLayout(grid)
@@ -309,32 +310,34 @@ class Widget(QWidget):
             label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             label.setStyleSheet("font-weight: bold")
             grid.addWidget(label, i + 1, 0)
-        for i in range(1, 4):
-            label = QLabel(f"Rx #{i}")
-            label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            label.setStyleSheet("font-weight: bold")
-            label.setFixedHeight(20)
-            grid.addWidget(label, 0, i)
 
         rx_widgets = []
         def create_rx_column(idx):
+            """ Header
+            """
+            label = QLabel(f"Rx #{idx}")
+            grid.addWidget(label, 0, idx)
+            label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            label.setStyleSheet("font-weight: bold")
+            label.setFixedHeight(20)
+
             """ RF-DC Status
             """
-            vbox1 = QVBoxLayout()
-            grid.addLayout(vbox1, 1, idx)
+            rfdc_vbox = QVBoxLayout()
+            grid.addLayout(rfdc_vbox, 1, idx)
 
             _widgets = dict()
             rx_widgets.append(_widgets)
 
             rfdc_img = QLabel("")
-            vbox1.addWidget(rfdc_img)
+            rfdc_vbox.addWidget(rfdc_img)
             _widgets['rfdc_img'] = rfdc_img
             rfdc_img.setAlignment(Qt.AlignmentFlag.AlignCenter)
             rfdc_img.setScaledContents(True)
             rfdc_img.setMaximumSize(120, 100)
 
             rfdc_label = QLabel("")
-            vbox1.addWidget(rfdc_label)
+            rfdc_vbox.addWidget(rfdc_label)
             _widgets['rfdc_label'] = rfdc_label
             rfdc_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             rfdc_label.setStyleSheet("font-size: 8pt;")
@@ -342,18 +345,18 @@ class Widget(QWidget):
 
             """ Battery Status
             """
-            vbox2 = QVBoxLayout()
-            grid.addLayout(vbox2, 2, idx)
+            bat_vbox = QVBoxLayout()
+            grid.addLayout(bat_vbox, 2, idx)
 
             bat_pbar = QProgressBar()
-            vbox2.addWidget(bat_pbar)
+            bat_vbox.addWidget(bat_pbar)
             _widgets['bat_pbar'] = bat_pbar
             bat_pbar.setAlignment(Qt.AlignmentFlag.AlignCenter)
             bat_pbar.setMinimumSize(60, 10)
             bat_pbar.setTextVisible(True)
 
             bat_label = QLabel("")
-            vbox2.addWidget(bat_label)
+            bat_vbox.addWidget(bat_label)
             _widgets['bat_label'] = bat_label
             bat_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             bat_label.setStyleSheet("font-size: 8pt;")
@@ -413,10 +416,8 @@ class Widget(QWidget):
 
     def create_cmd_group(self):
         groupbox = QGroupBox("Commands")
-        groupbox.setStyleSheet(self.groupbox_ss)
-        groupbox.setFont(self.groupbox_font)
         groupbox.setFixedSize(430, 160)
-        groupbox.setFlat(True)
+        self.style_groupbox(groupbox)
 
         vbox = QVBoxLayout()
         groupbox.setLayout(vbox)
@@ -458,9 +459,8 @@ class Widget(QWidget):
 
     def create_console(self):
         groupbox = QGroupBox("Log")
-        groupbox.setStyleSheet(self.groupbox_ss)
-        groupbox.setFont(self.groupbox_font)
         groupbox.setMinimumSize(500, 150)
+        self.style_groupbox(groupbox)
 
         hbox0 = QVBoxLayout()
         groupbox.setLayout(hbox0)
