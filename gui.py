@@ -10,8 +10,7 @@ from PyQt6.QtGui import *
 from PyQt6.QtCore import *
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 
-from main import process, stream, command, Status, CmdType
-from main import check_done, clear_done, get_measure
+from main import process, stream, command, Status, CmdType, logger
 from sim import Esa, plot_sim, set_phases, set_target_angle, set_rx_coord
 
 phases = np.zeros(16, dtype=np.int8)
@@ -107,10 +106,11 @@ class Window(QMainWindow):
             for i, v in enumerate(stream.peri_infos):
                 set_rx_coord(i, v.position)
 
-            if check_done():
-                clear_done()
-                ccp, scanning_rate, tops_p_watt = get_measure()
-                # self.widget.te.append(f"MCP: {ccp}uA/MHz  |  Scanning Rate: {scanning_rate:5.2f}ms  |  TOPS/W: {tops_p_watt:.3f}")
+            if logger.done:
+                logger.done = False
+                self.widget.te.append(f"MCP: {logger.ccp}uA/MHz  |  "
+                                      f"Scanning Rate: {logger.scanning_rate:5.2f}ms  |  "
+                                      f"TOPS/W: {logger.tops_p_watt:.3f}")
 
         timer = QTimer(self)
         timer.timeout.connect(updater)
@@ -192,16 +192,16 @@ class Widget(QWidget):
         """
         vbox1 = QVBoxLayout()
         # grid.addLayout(vbox1, 0, 1)
-        theta_label = QLabel()
         theta_slider = QSlider(orientation=Qt.Orientation.Horizontal)
+        vbox1.addWidget(theta_slider)
         theta_slider.setRange(-90, 90)
         theta_slider.setSingleStep(5)
+        theta_label = QLabel()
+        vbox1.addWidget(theta_label)
         theta_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         theta_label.setMaximumHeight(15)
         theta_label.setText(f"θ: {theta_slider.value():3}°")
         theta_slider.valueChanged.connect(lambda: theta_label.setText(f"θ: {theta_slider.value():3}°"))
-        vbox1.addWidget(theta_slider)
-        vbox1.addWidget(theta_label)
 
         """ PHI
         """

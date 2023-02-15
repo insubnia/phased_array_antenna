@@ -91,43 +91,37 @@ class UdpServer(object):
 stream = Stream()
 command = Command()
 
-# for project response
-done_flag = False
-ccp = 0
-scanning_rate = 0
-tops_p_watt = 0
 
-def check_done():
-    return done_flag
-def clear_done():
-    global done_flag
-    done_flag = False
-def get_measure():
-    return ccp, scanning_rate, tops_p_watt
+class Logger():
+    def __init__(self):
+        self.done = False
+        self.ccp = 0
+        self.scanning_rate = 0
+        self.tops_p_watt = 0
+
+    def get_logstring(self):
+        s = ""
+        for i, peri in enumerate(stream.peri_infos):
+            if peri.address[0] == 0:
+                continue
+            pos = peri.position
+            s += f"{i + 1}, {pos[0]}, {pos[1]}, {pos[2]}"
+            for v in peri.phases:
+                s += f", {v}"
+            for v in peri.rfdc_ranges:
+                s += f", {v}"
+
+            self.ccp = random.randint(242, 246)
+            self.ccp /= 10
+            self.scanning_rate = random.randint(910, 990)
+            self.scanning_rate /= 100
+            self.tops_p_watt = random.randint(580, 590)
+            self.tops_p_watt /= 1000
+            s += f", {self.ccp}, {self.scanning_rate}, {self.tops_p_watt}\n"
+        return s
 
 
-def get_logstring():
-    string = ""
-    for i, peri in enumerate(stream.peri_infos):
-        if peri.address[0] == 0:
-            continue
-        pos = peri.position
-        tmp = f"{i + 1}, {pos[0]}, {pos[1]}, {pos[2]}"
-        for v in peri.phases:
-            tmp += f", {v}"
-        for v in peri.rfdc_ranges:
-            tmp += f", {v}"
-
-        global ccp, scanning_rate, tops_p_watt
-        ccp = random.randint(242, 246)
-        ccp /= 10
-        scanning_rate = random.randint(910, 990)
-        scanning_rate /= 100
-        tops_p_watt = random.randint(580, 590)
-        tops_p_watt /= 1000
-        tmp += f", {ccp}, {scanning_rate}, {tops_p_watt}\n"
-        string += tmp
-    return string
+logger = Logger()
 
 
 def process():
@@ -188,12 +182,11 @@ def process():
         if command.running is True and stream.status == Status.READY:
             # if command.valid_cmd in [CmdType.SCAN, CmdType.TARGET_1, CmdType.TARGET_2, CmdType.TARGET_3]:
             if command.valid_cmd in [CmdType.TARGET_1, CmdType.TARGET_2, CmdType.TARGET_3]:
-                logging.info(get_logstring())
+                logging.info(logger.get_logstring())
             command.valid_cmd = CmdType.NOP
             command.running = False
 
-            global done_flag
-            done_flag = True
+            logger.done = True
 
 
 if __name__ == "__main__":
