@@ -16,7 +16,6 @@ from sim import Esa, plot_sim, set_phases, set_target_angle, set_rx_coord
 
 phases = np.zeros(16, dtype=np.int8)
 loss = 80
-
 esa = Esa()
 
 
@@ -87,23 +86,26 @@ class Window(QMainWindow):
         statusbar = self.statusBar()
         statusbar.showMessage("Ready")
 
-        def synchronizer():
-            if stream.status == Status.NO_CONN:
-                pass
-            command.phases = phases.copy()  # copy stream data to gui data
+        def updater():
             command.loss = loss
-            # print(command.phases)
-            for i, v in enumerate(stream.peri_infos):
-                pos = v.position
-                set_rx_coord(i, pos)
-
             if stream.status == Status.READY:
-                self.widget.set_mode(0)
+                command.phases = phases.copy()  # copy stream data to gui data
+                self.widget.tx_group.setEnabled(True)
+                self.widget.rx_group.setEnabled(True)
+                self.widget.cmd_group.setEnabled(True)
             elif stream.status == Status.BUSY:
-                self.widget.set_mode(1)
+                phases.put(range(0, 16), stream.curr_phases)  # reflect current phases of target
+                self.widget.tx_group.setEnabled(False)
+                self.widget.rx_group.setEnabled(True)
+                self.widget.cmd_group.setEnabled(False)
             else:
-                self.widget.set_mode(2)
+                self.widget.tx_group.setEnabled(False)
+                self.widget.rx_group.setEnabled(False)
+                self.widget.cmd_group.setEnabled(False)
             statusbar.showMessage(Status.string_by_val(stream.status))
+
+            for i, v in enumerate(stream.peri_infos):
+                set_rx_coord(i, v.position)
 
             if check_done():
                 clear_done()
@@ -111,7 +113,7 @@ class Window(QMainWindow):
                 # self.widget.te.append(f"MCP: {ccp}uA/MHz  |  Scanning Rate: {scanning_rate:5.2f}ms  |  TOPS/W: {tops_p_watt:.3f}")
 
         timer = QTimer(self)
-        timer.timeout.connect(synchronizer)
+        timer.timeout.connect(updater)
         timer.start(50)
 
 
@@ -138,30 +140,14 @@ class Widget(QWidget):
         self.cmd_group = self.create_cmd_group()
         grid.addWidget(self.cmd_group, 0, 2)
 
-        canvas = self.create_canvas()
-        grid.addWidget(canvas, 0, 0, 3, 1)
-        console = self.create_console()
-        grid.addWidget(console, 2, 1, 1, 2)
+        grid.addWidget(self.create_canvas(), 0, 0, 3, 1)
+        grid.addWidget(self.create_console(), 2, 1, 1, 2)
 
     def create_canvas(self):
         fig = plot_sim()
         canvas = FigureCanvas(fig)
         canvas.draw()
         return canvas
-
-    def set_mode(self, mode):
-        if mode == 0:
-            self.tx_group.setEnabled(True)
-            self.rx_group.setEnabled(True)
-            self.cmd_group.setEnabled(True)
-        elif mode == 1:
-            self.tx_group.setEnabled(False)
-            self.rx_group.setEnabled(True)
-            self.cmd_group.setEnabled(False)
-        elif mode == 2:
-            self.tx_group.setEnabled(False)
-            self.rx_group.setEnabled(False)
-            self.cmd_group.setEnabled(False)
 
     def create_tx_group(self):
         groupbox = QGroupBox("Tx System")
