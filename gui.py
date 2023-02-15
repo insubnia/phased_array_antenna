@@ -316,56 +316,55 @@ class Widget(QWidget):
             label.setFixedHeight(20)
             grid.addWidget(label, 0, i)
 
-        _rfdc_labels = []
-        _rfdc_digits = []
-        _vbat_pbars = []
-        _vbat_labels = []
-        _profile_labels = []
-        def create_target_column(idx):
+        rx_widgets = []
+        def create_rx_column(idx):
             """ RF-DC Status
             """
             vbox1 = QVBoxLayout()
             grid.addLayout(vbox1, 1, idx)
 
-            image = QLabel("")
-            vbox1.addWidget(image)
-            _rfdc_labels.append(image)
-            image.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            image.setScaledContents(True)
-            image.setMaximumSize(120, 100)
+            _widgets = dict()
+            rx_widgets.append(_widgets)
 
-            label2 = QLabel("")
-            vbox1.addWidget(label2)
-            _rfdc_digits.append(label2)
-            label2.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            label2.setStyleSheet("font-size: 8pt;")
-            label2.setFixedSize(60, 10)
+            rfdc_img = QLabel("")
+            vbox1.addWidget(rfdc_img)
+            _widgets['rfdc_img'] = rfdc_img
+            rfdc_img.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            rfdc_img.setScaledContents(True)
+            rfdc_img.setMaximumSize(120, 100)
+
+            rfdc_label = QLabel("")
+            vbox1.addWidget(rfdc_label)
+            _widgets['rfdc_label'] = rfdc_label
+            rfdc_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            rfdc_label.setStyleSheet("font-size: 8pt;")
+            rfdc_label.setFixedSize(60, 10)
 
             """ Battery Status
             """
             vbox2 = QVBoxLayout()
             grid.addLayout(vbox2, 2, idx)
 
-            pbar = QProgressBar()
-            vbox2.addWidget(pbar)
-            _vbat_pbars.append(pbar)
-            pbar.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            pbar.setMinimumSize(60, 10)
-            pbar.setTextVisible(True)
+            bat_pbar = QProgressBar()
+            vbox2.addWidget(bat_pbar)
+            _widgets['bat_pbar'] = bat_pbar
+            bat_pbar.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            bat_pbar.setMinimumSize(60, 10)
+            bat_pbar.setTextVisible(True)
 
-            label3 = QLabel("")
-            vbox2.addWidget(label3)
-            _vbat_labels.append(label3)
-            label3.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            label3.setStyleSheet("font-size: 8pt;")
-            label3.setFixedSize(60, 10)
+            bat_label = QLabel("")
+            vbox2.addWidget(bat_label)
+            _widgets['bat_label'] = bat_label
+            bat_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            bat_label.setStyleSheet("font-size: 8pt;")
+            bat_label.setFixedSize(60, 10)
 
             """ Phase Profile
             """
-            label3 = QLabel("")
-            grid.addWidget(label3, 3, idx)
-            _profile_labels.append(label3)
-            label3.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            profile_label = QLabel("")
+            grid.addWidget(profile_label, 3, idx)
+            _widgets['profile_label'] = profile_label
+            profile_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
             """ Rx Positions
             """
@@ -382,7 +381,7 @@ class Widget(QWidget):
             z_le.returnPressed.connect(lambda: np.put(stream.peri_infos[idx - 1].position, 2, z_le.text()))
 
         for i in range(1, 4):
-            create_target_column(i)
+            create_rx_column(i)
 
         section_num = 6
         pixmaps = [QPixmap(resource_path(f'deco/signal_{i}')) for i in range(section_num)]
@@ -395,19 +394,16 @@ class Widget(QWidget):
             return section_num - 1
 
         def updater():
+            bat_adc_min, bat_adc_max = 3000, 4095
             for i, peri in enumerate(stream.peri_infos):
                 level = get_level(peri.rfdc_adc)
-                _rfdc_labels[i].setPixmap(pixmaps[level])
-                _rfdc_digits[i].setText(f"{peri.rfdc_adc}")
-
-                # 3000:4095 = 0:100
-                min_level, max_level = 3000, 4095
-                x = min(max_level, max(min_level, peri.bat_adc))
-                vbat_pct = int((x - min_level) / (max_level - min_level) * 100)
-                # print(f"{peri.bat_adc} -> {x} -> {vbat_pct}")
-                _vbat_pbars[i].setValue(vbat_pct)
-                _vbat_labels[i].setText(f"{peri.bat_adc}")
-                _profile_labels[i].setText(get_phase_display_string(peri.phases))
+                rx_widgets[i]['rfdc_img'].setPixmap(pixmaps[level])
+                rx_widgets[i]['rfdc_label'].setText(f"{peri.rfdc_adc}")
+                bat_adc = min(bat_adc_max, max(bat_adc_min, peri.bat_adc))
+                bat_pct = int((bat_adc - bat_adc_min) / (bat_adc_max - bat_adc_min) * 100)
+                rx_widgets[i]['bat_pbar'].setValue(bat_pct)
+                rx_widgets[i]['bat_label'].setText(f"{peri.bat_adc}")
+                rx_widgets[i]['profile_label'].setText(get_phase_display_string(peri.phases))
 
         timer = QTimer(self)
         timer.timeout.connect(updater)
@@ -440,6 +436,7 @@ class Widget(QWidget):
         clear_button.setStyleSheet(btn_ss)
         clear_button.setFixedHeight(50)
         clear_button.clicked.connect(lambda: (command.set_cmd(CmdType.RESET), phases.fill(0)))
+        clear_button.setShortcut('0')
 
         hbox1 = QHBoxLayout()
         vbox.addLayout(hbox1)
