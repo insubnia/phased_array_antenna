@@ -10,7 +10,7 @@ from PyQt6.QtGui import *
 from PyQt6.QtCore import *
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 
-from main import process, stream, command, Status, CmdType, logger
+from main import process, upstream, downstream, Status, CmdType, logger
 from sim import Esa, plot_sim, set_phases, set_target_angle, set_rx_coord
 
 phases = np.zeros(16, dtype=np.int8)
@@ -85,14 +85,14 @@ class Window(QMainWindow):
         statusbar.showMessage("Ready")
 
         def updater():
-            command.loss = loss
-            if stream.status == Status.READY:
-                command.phases = phases.copy()  # copy stream data to gui data
+            downstream.loss = loss
+            if upstream.status == Status.READY:
+                downstream.phases = phases.copy()  # copy stream data to gui data
                 self.widget.tx_group.setEnabled(True)
                 self.widget.rx_group.setEnabled(True)
                 self.widget.cmd_group.setEnabled(True)
-            elif stream.status == Status.BUSY:
-                phases.put(range(0, 16), stream.curr_phases)  # reflect current phases of target
+            elif upstream.status == Status.BUSY:
+                phases.put(range(0, 16), upstream.curr_phases)  # reflect current phases of target
                 self.widget.tx_group.setEnabled(False)
                 self.widget.rx_group.setEnabled(True)
                 self.widget.cmd_group.setEnabled(False)
@@ -100,9 +100,9 @@ class Window(QMainWindow):
                 self.widget.tx_group.setEnabled(False)
                 self.widget.rx_group.setEnabled(False)
                 self.widget.cmd_group.setEnabled(False)
-            statusbar.showMessage(Status.string_by_val(stream.status))
+            statusbar.showMessage(Status.string_by_val(upstream.status))
 
-            for i, v in enumerate(stream.peri_infos):
+            for i, v in enumerate(upstream.peri_infos):
                 set_rx_coord(i, v.position)
 
             if logger.done:
@@ -238,7 +238,7 @@ class Widget(QWidget):
         mode_combobox.addItems(["Charging", "Scanning"])
         mode_combobox.setCurrentIndex(1)
         def combobox_changed():
-            command.peri_mode = mode_combobox.currentIndex()
+            downstream.peri_mode = mode_combobox.currentIndex()
         mode_combobox.currentIndexChanged.connect(combobox_changed)
         vbox3.addWidget(QLabel())  # dummy for layout
 
@@ -377,11 +377,11 @@ class Widget(QWidget):
             for i, le in enumerate([x_le, y_le, z_le]):
                 le.setFixedWidth(50)
                 le.setValidator(QIntValidator())
-                le.setText(str(stream.peri_infos[idx - 1].position[i]))
+                le.setText(str(upstream.peri_infos[idx - 1].position[i]))
                 pos_grid.addWidget(le, i, 1)
-            x_le.returnPressed.connect(lambda: np.put(stream.peri_infos[idx - 1].position, 0, x_le.text()))
-            y_le.returnPressed.connect(lambda: np.put(stream.peri_infos[idx - 1].position, 1, y_le.text()))
-            z_le.returnPressed.connect(lambda: np.put(stream.peri_infos[idx - 1].position, 2, z_le.text()))
+            x_le.returnPressed.connect(lambda: np.put(upstream.peri_infos[idx - 1].position, 0, x_le.text()))
+            y_le.returnPressed.connect(lambda: np.put(upstream.peri_infos[idx - 1].position, 1, y_le.text()))
+            z_le.returnPressed.connect(lambda: np.put(upstream.peri_infos[idx - 1].position, 2, z_le.text()))
 
         for i in range(1, 4):
             create_rx_column(i)
@@ -398,7 +398,7 @@ class Widget(QWidget):
 
         def updater():
             bat_adc_min, bat_adc_max = 3000, 4095
-            for i, peri in enumerate(stream.peri_infos):
+            for i, peri in enumerate(upstream.peri_infos):
                 level = get_level(peri.rfdc_adc)
                 rx_widgets[i]['rfdc_img'].setPixmap(pixmaps[level])
                 rx_widgets[i]['rfdc_label'].setText(f"{peri.rfdc_adc}")
@@ -431,20 +431,20 @@ class Widget(QWidget):
         hbox0.addWidget(scan_button)
         scan_button.setStyleSheet(btn_ss)
         scan_button.setFixedHeight(50)
-        scan_button.clicked.connect(lambda: command.set_cmd(CmdType.SCAN))
+        scan_button.clicked.connect(lambda: downstream.set_cmd(CmdType.SCAN))
         clear_button = QPushButton("Reset")
         hbox0.addWidget(clear_button)
         clear_button.setStyleSheet(btn_ss)
         clear_button.setFixedHeight(50)
-        clear_button.clicked.connect(lambda: (command.set_cmd(CmdType.RESET), phases.fill(0)))
+        clear_button.clicked.connect(lambda: (downstream.set_cmd(CmdType.RESET), phases.fill(0)))
         clear_button.setShortcut('0')
 
         hbox1 = QHBoxLayout()
         vbox.addLayout(hbox1)
 
         def target_button_clicked(i):
-            command.set_cmd(CmdType.TARGET_1 + i)
-            phases.put(range(0, 16), stream.peri_infos[i].phases)
+            downstream.set_cmd(CmdType.TARGET_1 + i)
+            phases.put(range(0, 16), upstream.peri_infos[i].phases)
             np.place(phases, phases < 0, 0)
 
         for i in range(3):

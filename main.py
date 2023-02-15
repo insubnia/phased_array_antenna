@@ -17,7 +17,7 @@ if not os.path.exists(LOG_DIR):
 class Status(IntEnum):
     READY = 0
     BUSY = 1
-    NO_CONN = 255
+    DISCONN = 255
 
     @classmethod
     def string_by_val(cls, val):
@@ -25,7 +25,7 @@ class Status(IntEnum):
             return "Ready"
         elif val == cls.BUSY:
             return "Busy"
-        elif val == cls.NO_CONN:
+        elif val == cls.DISCONN:
             return "Disconnected"
         else:
             return ""
@@ -40,12 +40,10 @@ class CmdType(IntEnum):
     TARGET_3 = auto()
 
 
-class Stream(object):
+class Upstream():
     def __init__(self):
-        self.status = Status.NO_CONN
+        self.status = Status.DISCONN
         self.curr_phases = np.zeros(16, dtype=np.int8)
-        self.rfdc_range = np.zeros((3, 16), dtype=np.uint16)
-
         class PeriInfo(object):
             def __init__(self):
                 self.address = np.zeros(6, dtype=np.uint8)
@@ -57,7 +55,7 @@ class Stream(object):
         self.peri_infos = [PeriInfo() for _ in range(3)]
 
 
-class Command(object):
+class Downstream():
     def __init__(self):
         self.cmd = CmdType.NOP
         self.valid_cmd = CmdType.NOP
@@ -71,8 +69,17 @@ class Command(object):
         if cmd != CmdType.NOP:
             self.valid_cmd = cmd
 
+    @property
+    def packed_data(self):
+        data = np.zeros(64, dtype=np.uint8)
+        data.put(0, downstream.cmd)
+        data.put(1, downstream.loss)
+        data.put(2, downstream.peri_mode)
+        data.put(range(8, 8 + len(downstream.phases)), downstream.phases)
+        return data.tobytes()
 
-class UdpServer(object):
+
+class UdpServer():
     def __init__(self):
         self.server_addr = ('192.168.0.10', 1248)
         self.client_addr = ('192.168.0.20', 1248)
@@ -88,8 +95,8 @@ class UdpServer(object):
         self.sock.close()
 
 
-stream = Stream()
-command = Command()
+upstream = Upstream()
+downstream = Downstream()
 
 
 class Logger():
@@ -118,7 +125,7 @@ class Logger():
 
     def get_logstring(self):
         s = ""
-        for i, peri in enumerate(stream.peri_infos):
+        for i, peri in enumerate(upstream.peri_infos):
             if peri.address[0] == 0:
                 continue
             pos = peri.position
@@ -127,7 +134,6 @@ class Logger():
                 s += f", {v}"
             for v in peri.rfdc_ranges:
                 s += f", {v}"
-
             self.ccp = random.randint(242, 246) / 10
             self.scanning_rate = random.randint(910, 990) / 100
             self.tops_p_watt = random.randint(580, 590) / 1000
@@ -142,47 +148,40 @@ def process():
     server = UdpServer()
 
     while True:
-        if stream.status == Status.READY:
+        if upstream.status == Status.READY:
             server.sock.settimeout(1)
-        elif stream.status == Status.BUSY:
+        elif upstream.status == Status.BUSY:
             server.sock.settimeout(5)
 
-        cmds = np.zeros(64, dtype=np.uint8)
-        cmds.put(0, command.cmd)
-        cmds.put(1, command.loss)
-        cmds.put(2, command.peri_mode)
-        cmds.put(range(8, 8 + len(command.phases)), command.phases)
-        server.sock.sendto(cmds.tobytes(), server.client_addr)
-        command.cmd = CmdType.NOP
+        server.sock.sendto(downstream.packed_data, server.client_addr)
+        downstream.cmd = CmdType.NOP
 
         try:
             data, _ = server.sock.recvfrom(1248)
         except Exception:
-            stream.status = Status.NO_CONN
+            upstream.status = Status.DISCONN
             print(f"{Fore.CYAN}Waiting for client packet{Fore.RESET}")
             continue
 
-        stream.status = data[0]
-        stream.curr_phases = np.frombuffer(data[4:20], dtype=np.int8)
+        upstream.status = data[0]
+        upstream.curr_phases = np.frombuffer(data[4:20], dtype=np.int8)
         o = 128
-        for i, peri in enumerate(stream.peri_infos):
-            peri.address = np.frombuffer(data[o: o + 6], dtype=np.uint8)
-            peri.rfdc_adc, peri.bat_adc = np.frombuffer(data[o + 8: o + 12], dtype=np.uint16)
-            peri.phases = np.frombuffer(data[o + 12: o + 28], dtype=np.int8)
-            peri.rfdc_ranges = np.frombuffer(data[o + 28: o + 60], dtype=np.uint16)
+        for peri_info in upstream.peri_infos:
+            peri_info.address = np.frombuffer(data[o: o + 6], dtype=np.uint8)
+            peri_info.rfdc_adc, peri_info.bat_adc = np.frombuffer(data[o + 8: o + 12], dtype=np.uint16)
+            peri_info.phases = np.frombuffer(data[o + 12: o + 28], dtype=np.int8)
+            peri_info.rfdc_ranges = np.frombuffer(data[o + 28: o + 60], dtype=np.uint16)
             o += 128
 
         # Command processing
         # print(f"cmd: {command.cmd} | valid cmd: {command.valid_cmd} | running: {command.running} | status: {stream.status}")
-        if command.valid_cmd != CmdType.NOP and stream.status == Status.BUSY:
-            command.running = True
-        if command.running is True and stream.status == Status.READY:
-            # if command.valid_cmd in [CmdType.SCAN, CmdType.TARGET_1, CmdType.TARGET_2, CmdType.TARGET_3]:
-            if command.valid_cmd in [CmdType.TARGET_1, CmdType.TARGET_2, CmdType.TARGET_3]:
+        if downstream.valid_cmd != CmdType.NOP and upstream.status == Status.BUSY:
+            downstream.running = True
+        if downstream.running is True and upstream.status == Status.READY:
+            if downstream.valid_cmd in [CmdType.TARGET_1, CmdType.TARGET_2, CmdType.TARGET_3]:
                 logging.info(logger.get_logstring())
-            command.valid_cmd = CmdType.NOP
-            command.running = False
-
+            downstream.valid_cmd = CmdType.NOP
+            downstream.running = False
             logger.done = True
 
 
