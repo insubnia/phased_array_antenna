@@ -99,6 +99,23 @@ class Logger():
         self.scanning_rate = 0
         self.tops_p_watt = 0
 
+        now = datetime.now()
+        logging.basicConfig(filename=f"{LOG_DIR}/{now.strftime('%Y%m%d_%H%M%S')}.csv",
+                            filemode='w',
+                            # format='%(asctime)s, %(message)s',
+                            format='%(message)s',
+                            datefmt='%y-%m-%d %H:%M:%S',
+                            level=logging.NOTSET)
+        logging.StreamHandler.terminator = ""
+
+        header_row = "rx#, R, θ, ϕ"
+        for i in range(16):
+            header_row += f", ps#{i}"
+        for i in range(16):
+            header_row += f", range#{i}"
+        header_row += ", CCP(uW), Scanning Rate(ms), TOPS/W"
+        logging.info(f"{header_row}\n")
+
     def get_logstring(self):
         s = ""
         for i, peri in enumerate(stream.peri_infos):
@@ -111,12 +128,9 @@ class Logger():
             for v in peri.rfdc_ranges:
                 s += f", {v}"
 
-            self.ccp = random.randint(242, 246)
-            self.ccp /= 10
-            self.scanning_rate = random.randint(910, 990)
-            self.scanning_rate /= 100
-            self.tops_p_watt = random.randint(580, 590)
-            self.tops_p_watt /= 1000
+            self.ccp = random.randint(242, 246) / 10
+            self.scanning_rate = random.randint(910, 990) / 100
+            self.tops_p_watt = random.randint(580, 590) / 1000
             s += f", {self.ccp}, {self.scanning_rate}, {self.tops_p_watt}\n"
         return s
 
@@ -126,23 +140,6 @@ logger = Logger()
 
 def process():
     server = UdpServer()
-
-    now = datetime.now()
-    logging.basicConfig(filename=f"{LOG_DIR}/{now.strftime('%Y%m%d_%H%M%S')}.csv",
-                        filemode='w',
-                        # format='%(asctime)s, %(message)s',
-                        format='%(message)s',
-                        datefmt='%y-%m-%d %H:%M:%S',
-                        level=logging.NOTSET)
-    logging.StreamHandler.terminator = ""
-
-    header_row = "rx#, R, θ, ϕ"
-    for i in range(16):
-        header_row += f", ps#{i}"
-    for i in range(16):
-        header_row += f", range#{i}"
-    header_row += ", CCP(uW), Scanning Rate(ms), TOPS/W"
-    logging.info(f"{header_row}\n")
 
     while True:
         if stream.status == Status.READY:
