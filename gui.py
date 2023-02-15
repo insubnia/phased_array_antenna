@@ -92,7 +92,8 @@ class Window(QMainWindow):
                 self.widget.rx_group.setEnabled(True)
                 self.widget.cmd_group.setEnabled(True)
             elif upstream.status == Status.BUSY:
-                phases.put(range(0, 16), upstream.curr_phases)  # reflect current phases of target
+                if downstream.valid_cmd == CmdType.SCAN:  # reflect current target phases druing scanning
+                    phases.put(range(0, 16), upstream.curr_phases)
                 self.widget.tx_group.setEnabled(False)
                 self.widget.rx_group.setEnabled(True)
                 self.widget.cmd_group.setEnabled(False)

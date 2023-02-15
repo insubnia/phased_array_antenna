@@ -54,6 +54,17 @@ class Upstream():
                 self.position = np.zeros(3, dtype=int)
         self.peri_infos = [PeriInfo() for _ in range(3)]
 
+    def unpack_data(self, data):
+        upstream.status = data[0]
+        upstream.curr_phases = np.frombuffer(data[4:20], dtype=np.int8)
+        o = 128
+        for peri_info in upstream.peri_infos:
+            peri_info.address = np.frombuffer(data[o: o + 6], dtype=np.uint8)
+            peri_info.rfdc_adc, peri_info.bat_adc = np.frombuffer(data[o + 8: o + 12], dtype=np.uint16)
+            peri_info.phases = np.frombuffer(data[o + 12: o + 28], dtype=np.int8)
+            peri_info.rfdc_ranges = np.frombuffer(data[o + 28: o + 60], dtype=np.uint16)
+            o += 128
+
 
 class Downstream():
     def __init__(self):
@@ -93,10 +104,6 @@ class UdpServer():
 
     def __del__(self):
         self.sock.close()
-
-
-upstream = Upstream()
-downstream = Downstream()
 
 
 class Logger():
@@ -141,18 +148,14 @@ class Logger():
         return s
 
 
+upstream = Upstream()
+downstream = Downstream()
+server = UdpServer()
 logger = Logger()
 
 
 def process():
-    server = UdpServer()
-
     while True:
-        if upstream.status == Status.READY:
-            server.sock.settimeout(1)
-        elif upstream.status == Status.BUSY:
-            server.sock.settimeout(5)
-
         server.sock.sendto(downstream.packed_data, server.client_addr)
         downstream.cmd = CmdType.NOP
 
@@ -163,17 +166,8 @@ def process():
             print(f"{Fore.CYAN}Waiting for client packet{Fore.RESET}")
             continue
 
-        upstream.status = data[0]
-        upstream.curr_phases = np.frombuffer(data[4:20], dtype=np.int8)
-        o = 128
-        for peri_info in upstream.peri_infos:
-            peri_info.address = np.frombuffer(data[o: o + 6], dtype=np.uint8)
-            peri_info.rfdc_adc, peri_info.bat_adc = np.frombuffer(data[o + 8: o + 12], dtype=np.uint16)
-            peri_info.phases = np.frombuffer(data[o + 12: o + 28], dtype=np.int8)
-            peri_info.rfdc_ranges = np.frombuffer(data[o + 28: o + 60], dtype=np.uint16)
-            o += 128
+        upstream.unpack_data(data)
 
-        # Command processing
         # print(f"cmd: {command.cmd} | valid cmd: {command.valid_cmd} | running: {command.running} | status: {stream.status}")
         if downstream.valid_cmd != CmdType.NOP and upstream.status == Status.BUSY:
             downstream.running = True
