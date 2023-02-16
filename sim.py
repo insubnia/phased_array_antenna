@@ -27,10 +27,10 @@ theta0, phi0 = 20, 30
 surf = None
 
 # Essential functions
-def u(_theta, _phi):
-    return np.sin(_theta) * np.cos(_phi)
-def v(_theta, _phi):
-    return np.sin(_theta) * np.sin(_phi)
+def u(theta_r, phi_r):
+    return np.sin(theta_r) * np.cos(phi_r)
+def v(theta_r, phi_r):
+    return np.sin(theta_r) * np.sin(phi_r)
 
 # Plot
 DEGREE_STEP = 5
@@ -60,6 +60,12 @@ class Esa():
     def set_amplitude(cls, ampl):
         cls.A = ampl
         weights.fill(cls.A)
+
+    @staticmethod
+    def get_vector(pattern_data):
+        idx = np.unravel_index(np.argmax(pattern_data, axis=None), pattern_data.shape)
+        theta_d, phi_d = np.rad2deg(THETA[idx]), np.rad2deg(PHI[idx])
+        return theta_d, phi_d
 
 
 def get_pattern_data_from_target_angle(theta_d, phi_d):
@@ -170,9 +176,9 @@ def plot_sim():
     ax.set_title("Beam Pattern", color='#778899', size=15, weight='bold', va='bottom')
     ax.view_init(elev=110, azim=-105, roll=-15)
 
-    ax.plot([0, axis_length], [0, 0], [0, 0], linewidth=1, color='red')
-    ax.plot([0, 0], [0, axis_length], [0, 0], linewidth=1, color='green')
-    ax.plot([0, 0], [0, 0], [0, axis_length], linewidth=1, color='blue')
+    ax.plot([0, axis_length], [0, 0], [0, 0], lw=1, c='red')
+    ax.plot([0, 0], [0, axis_length], [0, 0], lw=1, c='green')
+    ax.plot([0, 0], [0, 0], [0, axis_length], lw=1, c='blue')
     ax.set_xlim(-axis_length, axis_length)
     ax.set_ylim(-axis_length, axis_length)
 
@@ -203,13 +209,13 @@ if __name__ == "__main__":
 
     def on_press(event):
         global theta0, phi0
-        if event.key == 'h':
+        if event.key == 'left':
             theta0 = max(theta0 - 5, -90)
-        elif event.key == 'l':
+        elif event.key == 'right':
             theta0 = min(theta0 + 5, 90)
-        elif event.key == 'j':
+        elif event.key == 'down':
             phi0 = max(phi0 - 5, -180)
-        elif event.key == 'k':
+        elif event.key == 'up':
             phi0 = min(phi0 + 5, 180)
     fig.canvas.mpl_connect('key_press_event', on_press)
 
