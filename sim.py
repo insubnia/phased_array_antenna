@@ -26,13 +26,23 @@ phases = np.zeros((M, N), dtype=float)
 theta0, phi0 = 20, 30
 surf = None
 
-# Essential functions
+""" Coordinate handling
+"""
 def u(theta_r, phi_r):
     return np.sin(theta_r) * np.cos(phi_r)
+
 def v(theta_r, phi_r):
     return np.sin(theta_r) * np.sin(phi_r)
 
-# Plot
+def spherical_to_cartesian(r, theta_r, phi_r):
+    x = r * u(theta_r, phi_r)
+    y = r * v(theta_r, phi_r)
+    z = r * np.cos(theta_r)
+    return x, y, z
+
+
+""" Plotting constants
+"""
 DEGREE_STEP = 5
 THETA = np.arange(-90, 90 + 1, DEGREE_STEP)
 PHI = np.arange(-180, 180 + 1, DEGREE_STEP)
@@ -105,13 +115,6 @@ def get_desired_phase(theta_d, phi_d):
     return phase_d
 
 
-def spherical_to_cartesian(r, theta_r, phi_r):
-    x = r * np.sin(theta_r) * np.cos(phi_r)
-    y = r * np.sin(theta_r) * np.sin(phi_r)
-    z = r * np.cos(theta_r)
-    return x, y, z
-
-
 def set_target_angle(theta, phi):
     global theta0, phi0
     theta0, phi0 = theta, phi
@@ -127,7 +130,7 @@ def set_rx_coord(idx, coord):
 def plot_receivers():
     for i, coord in enumerate(rx_coords):
         obj = rx_plot_objs[i]
-
+        """
         # if all(coord == 0):
         if coord[0] < 5 or coord[0] > 300:
             obj.scatter._offsets3d = ([], [], [])
@@ -138,10 +141,12 @@ def plot_receivers():
 
         r, theta, phi = coord[0], np.deg2rad(coord[1]), np.deg2rad(coord[2])
         x, y, z = spherical_to_cartesian(r, theta, phi)
+        """
+        x, y, z = coord[0], coord[1], coord[2]
 
         obj.scatter._offsets3d = ([x], [y], [z])
         obj.text.remove()
-        obj.text = ax.text(x, y, z, f"Rx#{i}", c='m')
+        obj.text = ax.text(x, y, z, f"Rx#{i + 1}", c='m')
         obj.plot.set_data([0, x], [0, y])
         obj.plot.set_3d_properties([0, z])
 
