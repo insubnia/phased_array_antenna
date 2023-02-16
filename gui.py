@@ -11,7 +11,7 @@ from PyQt6.QtCore import *
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 
 from main import process, upstream, downstream, Status, CmdType, logger
-from sim import Esa, plot_sim, set_phases, set_target_angle, set_rx_coord
+from sim import Esa, plot_sim, set_rx_coord
 
 phases = np.zeros(16, dtype=np.int8)
 loss = 80
@@ -108,9 +108,11 @@ class Window(QMainWindow):
 
             if logger.done:
                 logger.done = False
+                """
                 self.widget.te.append(f"MCP: {logger.ccp}uA/MHz  |  "
                                       f"Scanning Rate: {logger.scanning_rate:5.2f}ms  |  "
                                       f"TOPS/W: {logger.tops_p_watt:.3f}")
+                """
 
         timer = QTimer(self)
         timer.timeout.connect(updater)
@@ -281,7 +283,6 @@ class Widget(QWidget):
                 grid.addWidget(create_single_phase_layout(r, c), r + 1, c)
 
         def updater():
-            # set_target_angle(theta_slider.value(), phi_slider.value())
             dsa_slider.setValue(-loss)
             sim_phases = np.ndarray((esa.N, esa.M), dtype=float)
             for r in range(esa.N):
@@ -289,7 +290,7 @@ class Widget(QWidget):
                     val = phases[remap(esa.M * r + c)]
                     phase_dials[r][c].setValue(val)
                     sim_phases[r][c] = val * 22.5
-            set_phases(sim_phases)
+            Esa.set_phases(sim_phases)
         timer = QTimer(self)
         timer.timeout.connect(updater)
         timer.start(100)

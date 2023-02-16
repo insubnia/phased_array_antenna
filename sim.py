@@ -21,12 +21,7 @@ xms = np.arange(0.5 - M / 2, M / 2, 1) * dx
 yns = np.arange(0.5 - N / 2, N / 2, 1) * dy
 yns = np.flip(yns)
 
-# Global Variables
-phases = np.zeros((M, N), dtype=float)
-theta0, phi0 = 20, 30
-surf = None
-
-""" Coordinate handling
+""" Coordinate transformation
 """
 def u(theta_r, phi_r):
     return np.sin(theta_r) * np.cos(phi_r)
@@ -48,6 +43,12 @@ THETA = np.arange(-90, 90 + 1, DEGREE_STEP)
 PHI = np.arange(-180, 180 + 1, DEGREE_STEP)
 THETA, PHI = np.deg2rad(np.meshgrid(THETA, PHI))
 
+""" Global variables
+"""
+phases = np.zeros((M, N), dtype=float)
+theta0, phi0 = 20, 30
+surf = None
+
 
 rx_coords = np.zeros((3, 3), dtype=int)
 class RxPlotObj():
@@ -57,14 +58,22 @@ class RxPlotObj():
         self.text = None
 rx_plot_objs = [RxPlotObj() for _ in range(3)]
 
-# rx_coords = np.array(((150, 45, 120), (150, 0, 0), (150, 45, 0)))
-
 
 class Esa():
     M, N = 4, 4
 
     def __init__(self):
-        return
+        self.theta0_d, self.phi0_d = 0, 0
+
+    @staticmethod
+    def set_target_angle(theta, phi):
+        global theta0, phi0
+        theta0, phi0 = theta, phi
+
+    @staticmethod
+    def set_phases(phases_d):
+        global phases
+        phases = phases_d
 
     @classmethod
     def set_amplitude(cls, ampl):
@@ -77,51 +86,40 @@ class Esa():
         theta_d, phi_d = np.rad2deg(THETA[idx]), np.rad2deg(PHI[idx])
         return theta_d, phi_d
 
-
-def get_pattern_data_from_target_angle(theta_d, phi_d):
-    theta_r, phi_r = np.deg2rad(theta_d), np.deg2rad(phi_d)
-    u0, v0 = u(theta_r, phi_r), v(theta_r, phi_r)
-
-    r = np.zeros(np.shape(PHI))
-    for n, yn in enumerate(yns):
-        for m, xm in enumerate(xms):
-            r = r + weights[m][n] * np.exp(1j * (
-                k * (xm * (u(THETA, PHI) - u0) + yn * (v(THETA, PHI) - v0))
-            ))
-    r = abs(r)
-    return r
-
-
-def get_pattern_data_from_phase(phase_d):
-    phase = np.deg2rad(phase_d)
-    r = np.zeros(np.shape(PHI))
-    for n, yn in enumerate(yns):
-        for m, xm in enumerate(xms):
-            r = r + weights[m][n] * np.exp(1j * (
-                k * (xm * u(THETA, PHI) + yn * v(THETA, PHI)) +
-                phase[m][n]
-            ))
-    r = abs(r)
-    return r
-
-
-def get_desired_phase(theta_d, phi_d):
-    theta_r, phi_r = np.deg2rad(theta_d), np.deg2rad(phi_d)
-    phase_d = np.ndarray((N, M))
-    for m, xm in enumerate(xms):
+    @staticmethod
+    def get_pattern_data_by_target_angle(theta_d, phi_d):
+        theta_r, phi_r = np.deg2rad(theta_d), np.deg2rad(phi_d)
+        u0, v0 = u(theta_r, phi_r), v(theta_r, phi_r)
+        r = np.zeros(np.shape(PHI))
         for n, yn in enumerate(yns):
-            cmpx = np.exp(-1j * k * (xm * u(theta_r, phi_r) + yn * v(theta_r, phi_r)))
-            phase_d[m][n] = np.angle(cmpx, deg=True)
-    return phase_d
+            for m, xm in enumerate(xms):
+                r = r + weights[m][n] * np.exp(1j * (
+                    k * (xm * (u(THETA, PHI) - u0) + yn * (v(THETA, PHI) - v0))
+                ))
+        return abs(r)
 
+    @staticmethod
+    def get_pattern_data_by_phased_array(phase_d):
+        phase = np.deg2rad(phase_d)
+        r = np.zeros(np.shape(PHI))
+        for n, yn in enumerate(yns):
+            for m, xm in enumerate(xms):
+                r = r + weights[m][n] * np.exp(1j * (
+                    k * (xm * u(THETA, PHI) + yn * v(THETA, PHI)) +
+                    phase[m][n]
+                ))
+        return abs(r)
 
-def set_target_angle(theta, phi):
-    global theta0, phi0
-    theta0, phi0 = theta, phi
+    @staticmethod
+    def get_desired_phase(theta_d, phi_d):
+        theta_r, phi_r = np.deg2rad(theta_d), np.deg2rad(phi_d)
+        phase_d = np.ndarray((N, M))
+        for m, xm in enumerate(xms):
+            for n, yn in enumerate(yns):
+                cmpx = np.exp(-1j * k * (xm * u(theta_r, phi_r) + yn * v(theta_r, phi_r)))
+                phase_d[m][n] = np.angle(cmpx, deg=True)
+        return phase_d
 
-def set_phases(_phases_d):
-    global phases
-    phases = _phases_d
 
 def set_rx_coord(idx, coord):
     rx_coords[idx] = coord
@@ -153,10 +151,10 @@ def plot_receivers():
 
 def update(frame):
     if 0:
-        R = get_pattern_data_from_target_angle(theta0, phi0)
+        R = Esa.get_pattern_data_by_target_angle(theta0, phi0)
     else:
-        # phases = get_desired_phase(theta0, phi0)
-        R = get_pattern_data_from_phase(phases)
+        # phases = Esa.get_desired_phase(theta0, phi0)
+        R = Esa.get_pattern_data_by_phased_array(phases)
     X, Y, Z = spherical_to_cartesian(R, THETA, PHI)
 
     global surf
@@ -173,7 +171,7 @@ def plot_sim():
     fig = plt.figure()
     fig.subplots_adjust(left=.03, right=.97)
 
-    R = get_pattern_data_from_target_angle(0, 0)
+    R = Esa.get_pattern_data_by_target_angle(0, 0)
     axis_length = np.max(R) * 1.3
 
     global ax
@@ -203,7 +201,7 @@ def plot_sim():
         obj.text = ax.text(0, 0, 0, "")
         obj.plot = ax.plot([], [], [], 'm--', lw=0.5)[0]
 
-    global anim  # In order to extend life cycle since animation is activated when anim_variable encounter plt.show
+    global anim  # In order to extend life cycle since animation is activated when anim variable encounter plt.show
     anim = FuncAnimation(fig, update, interval=100)
     # anim.save('sim.gif', writer='imagemagick', fps=60)
     return fig
@@ -223,7 +221,6 @@ if __name__ == "__main__":
         elif event.key == 'up':
             phi0 = min(phi0 + 5, 180)
     fig.canvas.mpl_connect('key_press_event', on_press)
-
     plt.show()
 
     """  Legacy code
@@ -231,12 +228,4 @@ if __name__ == "__main__":
     verts = np.dstack((X, Y, Z))
     surf.set_verts(verts)
     surf.set_3d_properties()
-
-    img = plt.imread('aa.png')
-    stepX, stepY = 20. / img.shape[0], 20. / img.shape[1]
-    X1 = np.arange(-10, 10, stepX)
-    Y1 = np.arange(-10, 10, stepY)
-    X2, Y2 = np.meshgrid(X1, Y1)
-    Z2 = np.zeros_like(X2)
-    ax.plot_surface(X2, Y2, Z2, rstride=4, cstride=4, facecolors=img)
     """
