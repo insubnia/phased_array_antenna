@@ -51,7 +51,7 @@ class Upstream():
                 self.rfdc_adc, self.bat_adc = 0, 0
                 self.phases = np.zeros(16, dtype=np.int8)
                 self.rfdc_ranges = np.zeros(16, dtype=np.uint16)
-                self.position = np.zeros(3, dtype=int)
+                self.r, self.theta_d, self.phi_d = 0, 0, 0
         self.peri_infos = [PeriInfo() for _ in range(3)]
 
     def unpack_data(self, data):

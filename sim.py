@@ -50,15 +50,6 @@ theta0, phi0 = 20, 30
 surf = None
 
 
-rx_coords = np.zeros((3, 3), dtype=int)
-class RxPlotObj():
-    def __init__(self):
-        self.scatter = None
-        self.plot = None
-        self.text = None
-rx_plot_objs = [RxPlotObj() for _ in range(3)]
-
-
 class Esa():
     M, N = 4, 4
 
@@ -121,32 +112,40 @@ class Esa():
         return phase_d
 
 
-def set_rx_coord(idx, coord):
-    rx_coords[idx] = coord
+class Receiver():
+    def __init__(self, name):
+        self.name = name
+        self.init_done = False
+        self.r, self.theta_d, self.phi_d = 0, 0, 0
+
+    def init_on_axis(self, ax):
+        self.ax = ax
+        self.scatter = ax.scatter([], [], [], marker='x', c='m', s=50)
+        self.text = ax.text(0, 0, 0, "")
+        self.line = ax.plot([], [], [], 'm--', lw=0.5)[0]
+        self.init_done = True
+
+    def update_plot(self):
+        if self.init_done is False:
+            return
+        x, y, z = self.xyz
+        name = self.name if self.r != 0 else ""
+
+        self.scatter._offsets3d = ([x], [y], [z])
+        self.text.remove()
+        self.text = self.ax.text(x, y, z, name, c='m')
+        self.line.set_data([0, x], [0, y])
+        self.line.set_3d_properties([0, z])
+
+    def set_spherical_coord(self, r, theta_d, phi_d):
+        self.r, self.theta_d, self.phi_d = r, theta_d, phi_d
+
+    @property
+    def xyz(self):
+        return spherical_to_cartesian(self.r, np.deg2rad(self.theta_d), np.deg2rad(self.phi_d))
 
 
-def plot_receivers():
-    for i, coord in enumerate(rx_coords):
-        obj = rx_plot_objs[i]
-        """
-        # if all(coord == 0):
-        if coord[0] < 5 or coord[0] > 300:
-            obj.scatter._offsets3d = ([], [], [])
-            obj.text.set_text("")
-            obj.plot.set_data([], [])
-            obj.plot.set_3d_properties([])
-            continue
-
-        r, theta, phi = coord[0], np.deg2rad(coord[1]), np.deg2rad(coord[2])
-        x, y, z = spherical_to_cartesian(r, theta, phi)
-        """
-        x, y, z = coord[0], coord[1], coord[2]
-
-        obj.scatter._offsets3d = ([x], [y], [z])
-        obj.text.remove()
-        obj.text = ax.text(x, y, z, f"Rx#{i + 1}", c='m')
-        obj.plot.set_data([0, x], [0, y])
-        obj.plot.set_3d_properties([0, z])
+receivers = [Receiver(f"Rx#{i}") for i in range(1, 4)]
 
 
 def update(frame):
@@ -164,7 +163,8 @@ def update(frame):
                            alpha=0.3, linewidth=0.1, rstride=1, cstride=1, aa=True)
     # text.set_text(f"θ: {theta0}° \nϕ: {phi0}°")
 
-    plot_receivers()
+    for receiver in receivers:
+        receiver.update_plot()
 
 
 def plot_sim():
@@ -195,11 +195,8 @@ def plot_sim():
     global text
     text = ax.text(xms[-1] + dx / 2, yns[-1] + dy / 2, 0, "")
 
-    # initialize rx plot objects
-    for obj in rx_plot_objs:
-        obj.scatter = ax.scatter([], [], [], marker='x', c='m', s=50)
-        obj.text = ax.text(0, 0, 0, "")
-        obj.plot = ax.plot([], [], [], 'm--', lw=0.5)[0]
+    for receiver in receivers:
+        receiver.init_on_axis(ax)
 
     global anim  # In order to extend life cycle since animation is activated when anim variable encounter plt.show
     anim = FuncAnimation(fig, update, interval=100)

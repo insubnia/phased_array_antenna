@@ -11,7 +11,7 @@ from PyQt6.QtCore import *
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 
 from main import process, upstream, downstream, Status, CmdType, logger
-from sim import Esa, plot_sim, set_rx_coord
+from sim import Esa, plot_sim, receivers
 
 phases = np.zeros(16, dtype=np.int8)
 loss = 80
@@ -104,7 +104,7 @@ class Window(QMainWindow):
             statusbar.showMessage(Status.string_by_val(upstream.status))
 
             for i, v in enumerate(upstream.peri_infos):
-                set_rx_coord(i, v.position)
+                receivers[i].set_spherical_coord(v.r, v.theta_d, v.phi_d)
 
             if logger.done:
                 logger.done = False
@@ -376,14 +376,15 @@ class Widget(QWidget):
             pos_grid = QGridLayout()
             grid.addLayout(pos_grid, 4, idx)
             x_le, y_le, z_le = QLineEdit(), QLineEdit(), QLineEdit()
+            peri_info = upstream.peri_infos[idx - 1]
             for i, le in enumerate([x_le, y_le, z_le]):
                 le.setFixedWidth(50)
                 le.setValidator(QIntValidator())
-                le.setText(str(upstream.peri_infos[idx - 1].position[i]))
+                le.setText("0")
                 pos_grid.addWidget(le, i, 1)
-            x_le.returnPressed.connect(lambda: np.put(upstream.peri_infos[idx - 1].position, 0, x_le.text()))
-            y_le.returnPressed.connect(lambda: np.put(upstream.peri_infos[idx - 1].position, 1, y_le.text()))
-            z_le.returnPressed.connect(lambda: np.put(upstream.peri_infos[idx - 1].position, 2, z_le.text()))
+            x_le.returnPressed.connect(lambda: setattr(peri_info, 'r', float(x_le.text())))
+            y_le.returnPressed.connect(lambda: setattr(peri_info, 'theta_d', float(y_le.text())))
+            z_le.returnPressed.connect(lambda: setattr(peri_info, 'phi_d', float(z_le.text())))
 
         for i in range(1, 4):
             create_rx_column(i)
