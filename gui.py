@@ -72,51 +72,49 @@ class Window(QMainWindow):
         QShortcut(QKeySequence('Ctrl+Q'), self, self.close)
         QShortcut(QKeySequence('Ctrl+W'), self, self.close)
 
+        self.statusbar = self.statusBar()
+        self.statusbar.showMessage("Ready")
+
         streamer = threading.Thread(target=process)
         streamer.daemon = True
         streamer.start()
+
         time.sleep(0.5)
 
-        self.init_updater()
+        timer = QTimer(self)
+        timer.timeout.connect(self.updater)
+        timer.start(50)
         self.show()
 
-    def init_updater(self):
-        statusbar = self.statusBar()
-        statusbar.showMessage("Ready")
+    def updater(self):
+        downstream.loss = loss
+        if upstream.status == Status.READY:
+            downstream.phases = phases.copy()  # copy stream data to gui data
+            self.widget.tx_group.setEnabled(True)
+            self.widget.rx_group.setEnabled(True)
+            self.widget.cmd_group.setEnabled(True)
+        elif upstream.status == Status.BUSY:
+            if downstream.valid_cmd == CmdType.SCAN:  # reflect current target phases druing scanning
+                phases.put(range(0, 16), upstream.curr_phases)
+            self.widget.tx_group.setEnabled(False)
+            self.widget.rx_group.setEnabled(True)
+            self.widget.cmd_group.setEnabled(False)
+        else:
+            self.widget.tx_group.setEnabled(False)
+            self.widget.rx_group.setEnabled(False)
+            self.widget.cmd_group.setEnabled(False)
+        self.statusbar.showMessage(Status.string_by_val(upstream.status))
 
-        def updater():
-            downstream.loss = loss
-            if upstream.status == Status.READY:
-                downstream.phases = phases.copy()  # copy stream data to gui data
-                self.widget.tx_group.setEnabled(True)
-                self.widget.rx_group.setEnabled(True)
-                self.widget.cmd_group.setEnabled(True)
-            elif upstream.status == Status.BUSY:
-                if downstream.valid_cmd == CmdType.SCAN:  # reflect current target phases druing scanning
-                    phases.put(range(0, 16), upstream.curr_phases)
-                self.widget.tx_group.setEnabled(False)
-                self.widget.rx_group.setEnabled(True)
-                self.widget.cmd_group.setEnabled(False)
-            else:
-                self.widget.tx_group.setEnabled(False)
-                self.widget.rx_group.setEnabled(False)
-                self.widget.cmd_group.setEnabled(False)
-            statusbar.showMessage(Status.string_by_val(upstream.status))
+        for i, v in enumerate(upstream.peri_infos):
+            receivers[i].set_spherical_coord(v.r, v.theta_d, v.phi_d)
 
-            for i, v in enumerate(upstream.peri_infos):
-                receivers[i].set_spherical_coord(v.r, v.theta_d, v.phi_d)
-
-            if logger.done:
-                logger.done = False
-                """
-                self.widget.te.append(f"MCP: {logger.ccp}uA/MHz  |  "
-                                      f"Scanning Rate: {logger.scanning_rate:5.2f}ms  |  "
-                                      f"TOPS/W: {logger.tops_p_watt:.3f}")
-                """
-
-        timer = QTimer(self)
-        timer.timeout.connect(updater)
-        timer.start(50)
+        if logger.done:
+            logger.done = False
+            """
+            self.widget.te.append(f"MCP: {logger.ccp}uA/MHz  |  "
+                                  f"Scanning Rate: {logger.scanning_rate:5.2f}ms  |  "
+                                  f"TOPS/W: {logger.tops_p_watt:.3f}")
+            """
 
 
 class Widget(QWidget):
