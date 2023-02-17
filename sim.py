@@ -140,6 +140,9 @@ class Receiver():
     def set_spherical_coord(self, r, theta_d, phi_d):
         self.r, self.theta_d, self.phi_d = r, theta_d, phi_d
 
+    def print_spherical_coord(self):
+        print(f"{self.name} <- R: {self.r} / Theta: {self.theta_d} / Phi: {self.phi_d}")
+
     @property
     def xyz(self):
         return spherical_to_cartesian(self.r, np.deg2rad(self.theta_d), np.deg2rad(self.phi_d))

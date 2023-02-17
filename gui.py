@@ -49,7 +49,7 @@ def reshape_phases(_phases):
     for r in range(esa.N):
         for c in range(esa.M):
             val = _phases[remap(esa.M * r + c)]
-            sim_phases[r][c] = val * 22.5
+            sim_phases[r][c] =  0 if val == -1 else val * 22.5
     return sim_phases
 
 
@@ -114,12 +114,16 @@ class Window(QMainWindow):
             self.widget.cmd_group.setEnabled(False)
         self.statusbar.showMessage(Status.string_by_val(upstream.status))
 
-        for i, v in enumerate(upstream.peri_infos):
-            receivers[i].set_spherical_coord(v.r, v.theta_d, v.phi_d)
-
         if logger.done:
             logger.done = False
             # self.widget.te.append(logger.get_log_string())
+            for i, receiver in enumerate(receivers):
+                _phases = upstream.peri_infos[i].phases
+                if all(_phases == -1):
+                    receiver.r = 0
+                    continue
+                vector = Esa.get_vector(reshape_phases(_phases))
+                receiver.set_spherical_coord(125, vector[0], vector[1])
 
 
 class Widget(QWidget):
