@@ -130,13 +130,12 @@ class Logger():
         header_row += ", CCP(uW), Scanning Rate(ms), TOPS/W"
         logging.info(f"{header_row}\n")
 
-    def get_logstring(self):
+    def get_csv_string(self):
         s = ""
         for i, peri in enumerate(upstream.peri_infos):
             if peri.address[0] == 0:
                 continue
-            pos = peri.position
-            s += f"{i + 1}, {pos[0]}, {pos[1]}, {pos[2]}"
+            s += f"{i + 1}, {peri.r}, {peri.theta_d}, {peri.phi_d}"
             for v in peri.phases:
                 s += f", {v}"
             for v in peri.rfdc_ranges:
@@ -145,6 +144,12 @@ class Logger():
             self.scanning_rate = random.randint(910, 990) / 100
             self.tops_p_watt = random.randint(580, 590) / 1000
             s += f", {self.ccp}, {self.scanning_rate}, {self.tops_p_watt}\n"
+        return s
+    
+    def get_log_string(self):
+        s = f"MCP: {logger.ccp}uA/MHz  |  " +\
+            f"Scanning Rate: {logger.scanning_rate:5.2f}ms  |  " +\
+            f"TOPS/W: {logger.tops_p_watt:.3f}"
         return s
 
 
@@ -173,7 +178,7 @@ def process():
             downstream.running = True
         if downstream.running is True and upstream.status == Status.READY:
             if downstream.valid_cmd in [CmdType.TARGET_1, CmdType.TARGET_2, CmdType.TARGET_3]:
-                logging.info(logger.get_logstring())
+                logging.info(logger.get_csv_string())
             downstream.valid_cmd = CmdType.NOP
             downstream.running = False
             logger.done = True

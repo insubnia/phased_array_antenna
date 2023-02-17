@@ -110,11 +110,7 @@ class Window(QMainWindow):
 
         if logger.done:
             logger.done = False
-            """
-            self.widget.te.append(f"MCP: {logger.ccp}uA/MHz  |  "
-                                  f"Scanning Rate: {logger.scanning_rate:5.2f}ms  |  "
-                                  f"TOPS/W: {logger.tops_p_watt:.3f}")
-            """
+            # self.widget.te.append(logger.get_log_string())
 
 
 class Widget(QWidget):
