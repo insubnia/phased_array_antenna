@@ -44,6 +44,15 @@ def remap(x):
     return table[x]
 
 
+def reshape_phases(_phases):
+    sim_phases = np.ndarray((esa.N, esa.M), dtype=float)
+    for r in range(esa.N):
+        for c in range(esa.M):
+            val = _phases[remap(esa.M * r + c)]
+            sim_phases[r][c] = val * 22.5
+    return sim_phases
+
+
 def get_phase_display_string(arr1d=None, string=""):
     if arr1d is None:
         arr1d = phases
@@ -278,13 +287,11 @@ class Widget(QWidget):
 
         def updater():
             dsa_slider.setValue(-loss)
-            sim_phases = np.ndarray((esa.N, esa.M), dtype=float)
             for r in range(esa.N):
                 for c in range(esa.M):
                     val = phases[remap(esa.M * r + c)]
                     phase_dials[r][c].setValue(val)
-                    sim_phases[r][c] = val * 22.5
-            Esa.set_phases(sim_phases)
+            Esa.set_phases(reshape_phases(phases))
         timer = QTimer(self)
         timer.timeout.connect(updater)
         timer.start(100)
