@@ -122,9 +122,7 @@ class Window(QMainWindow):
                 if all(_phases == -1):
                     receiver.r = 0
                     continue
-                sim_phases = reshape_phases(_phases)
-                patdata = Esa.get_pattern_data_by_phased_array(sim_phases)
-                vector = Esa.get_vector(patdata)
+                vector = Esa.get_vector(reshape_phases(_phases))
                 receiver.set_spherical_coord(125, vector[0], vector[1])
 
 

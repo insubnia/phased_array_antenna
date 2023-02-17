@@ -72,7 +72,8 @@ class Esa():
         weights.fill(cls.A)
 
     @staticmethod
-    def get_vector(pattern_data):
+    def get_vector(phases):
+        pattern_data = Esa.get_pattern_data_by_phased_array(phases)
         idx = np.unravel_index(np.argmax(pattern_data, axis=None), pattern_data.shape)
         theta_d, phi_d = np.rad2deg(THETA[idx]), np.rad2deg(PHI[idx])
         return theta_d, phi_d
