@@ -14,7 +14,7 @@ M, N = 4, 4
 # dependencies
 weights = np.full((M, N), Ampl)
 wave_length = c / Fin
-k = 2 * np.pi / wave_length
+k = 2 * np.pi / wave_length  # wavenumber
 dx = wave_length / 2
 dy = wave_length / 2
 xms = np.arange(0.5 - M / 2, M / 2, 1) * dx
@@ -108,8 +108,8 @@ class Esa():
         phase_d = np.ndarray((N, M))
         for m, xm in enumerate(xms):
             for n, yn in enumerate(yns):
-                cmpx = np.exp(-1j * k * (xm * u(theta_r, phi_r) + yn * v(theta_r, phi_r)))
-                phase_d[m][n] = np.angle(cmpx, deg=True)
+                cmplx = np.exp(-1j * k * (xm * u(theta_r, phi_r) + yn * v(theta_r, phi_r)))
+                phase_d[m][n] = np.angle(cmplx, deg=True)
         return phase_d
 
 
@@ -194,7 +194,7 @@ def plot_sim():
     # ax.scatter(X2, Y2, Z2, marker='o', s=30)
     for n in range(N):
         for m in range(M):
-            ax.text(xms[m], yns[n], 0, f"{M * n + 3 - m}", c='g', size=7, ha='center', va='center')
+            ax.text(xms[m], yns[n], 0, f"{M * n + m}", c='g', size=7, ha='center', va='center')
 
     global text
     text = ax.text(xms[-1] + dx / 2, yns[-1] + dy / 2, 0, "")

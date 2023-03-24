@@ -14,7 +14,7 @@ from main import process, upstream, downstream, Status, CmdType, logger
 from sim import Esa, plot_sim, receivers
 
 phases = np.zeros(16, dtype=np.int8)
-loss = 80
+loss = 127
 esa = Esa()
 
 
@@ -27,19 +27,11 @@ def resource_path(relative_path):
 
 
 def remap(x):
-    """
     table = (
-        3, 2, 1, 0,
-        7, 6, 5, 4,
-        11, 10, 9, 8,
-        15, 14, 13, 12,
-    )
-    """
-    table = (
-        12, 8, 4, 0,
-        13, 9, 5, 1,
-        14, 10, 6, 2,
-        15, 11, 7, 3,
+        0, 4, 8, 12,  
+        1, 5, 9, 13,  
+        2, 6, 10, 14,  
+        3, 7, 11, 15,  
     )
     return table[x]
 
