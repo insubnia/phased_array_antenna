@@ -13,6 +13,7 @@ LOG_DIR = './log'
 if not os.path.exists(LOG_DIR):
     os.makedirs(LOG_DIR)
 
+MAX_RX_NUM = 5
 
 class Status(IntEnum):
     READY = 0
@@ -38,6 +39,8 @@ class CmdType(IntEnum):
     TARGET_1 = auto()
     TARGET_2 = auto()
     TARGET_3 = auto()
+    TARGET_4 = auto()
+    TARGET_5 = auto()
 
 
 class Upstream():
@@ -52,7 +55,7 @@ class Upstream():
                 self.phases = np.zeros(16, dtype=np.int8)
                 self.rfdc_ranges = np.zeros(16, dtype=np.uint16)
                 self.r, self.theta_d, self.phi_d = 0, 0, 0
-        self.peri_infos = [PeriInfo() for _ in range(3)]
+        self.peri_infos = [PeriInfo() for _ in range(MAX_RX_NUM)]
 
     def unpack_data(self, data):
         upstream.status = data[0]
@@ -177,7 +180,7 @@ def process():
         if downstream.valid_cmd != CmdType.NOP and upstream.status == Status.BUSY:
             downstream.running = True
         if downstream.running is True and upstream.status == Status.READY:
-            if downstream.valid_cmd in [CmdType.TARGET_1, CmdType.TARGET_2, CmdType.TARGET_3]:
+            if downstream.valid_cmd in [CmdType.TARGET_1, CmdType.TARGET_2, CmdType.TARGET_3, CmdType.TARGET_4, CmdType.TARGET_5]:
                 logging.info(logger.get_csv_string())
             downstream.valid_cmd = CmdType.NOP
             downstream.running = False

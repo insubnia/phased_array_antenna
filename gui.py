@@ -10,7 +10,7 @@ from PyQt6.QtGui import *
 from PyQt6.QtCore import *
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 
-from main import process, upstream, downstream, Status, CmdType, logger
+from main import process, upstream, downstream, Status, CmdType, logger, MAX_RX_NUM
 from sim import Esa, plot_sim, receivers
 
 phases = np.zeros(16, dtype=np.int8)
@@ -296,7 +296,7 @@ class Widget(QWidget):
 
     def create_rx_group(self):
         groupbox = QGroupBox("Rx System")
-        groupbox.setFixedSize(430, 470)
+        groupbox.setFixedSize(550, 470)
         self.style_groupbox(groupbox)
 
         grid = QGridLayout()
@@ -383,8 +383,8 @@ class Widget(QWidget):
             y_le.returnPressed.connect(lambda: setattr(peri_info, 'theta_d', float(y_le.text())))
             z_le.returnPressed.connect(lambda: setattr(peri_info, 'phi_d', float(z_le.text())))
 
-        for i in range(1, 4):
-            create_rx_column(i)
+        for i in range(MAX_RX_NUM):
+            create_rx_column(i + 1)
 
         section_num = 6
         pixmaps = [QPixmap(resource_path(f'deco/signal_{i}')) for i in range(section_num)]
@@ -416,7 +416,7 @@ class Widget(QWidget):
 
     def create_cmd_group(self):
         groupbox = QGroupBox("Commands")
-        groupbox.setFixedSize(430, 160)
+        groupbox.setFixedSize(550, 160)
         self.style_groupbox(groupbox)
 
         vbox = QVBoxLayout()
@@ -447,7 +447,7 @@ class Widget(QWidget):
             phases.put(range(0, 16), upstream.peri_infos[i].phases)
             np.place(phases, phases < 0, 0)
 
-        for i in range(3):
+        for i in range(MAX_RX_NUM):
             button = QPushButton(f"Rx #{i + 1}")
             hbox1.addWidget(button)
             button.setStyleSheet(btn_ss)
