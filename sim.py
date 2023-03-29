@@ -149,7 +149,7 @@ class Receiver():
         return spherical_to_cartesian(self.r, np.deg2rad(self.theta_d), np.deg2rad(self.phi_d))
 
 
-receivers = [Receiver(f"Rx#{i}") for i in range(1, 4)]
+receivers = [Receiver(f"Rx#{i + 1}") for i in range(5)]
 
 
 def update(frame):
