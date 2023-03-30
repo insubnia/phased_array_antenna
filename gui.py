@@ -95,8 +95,11 @@ class Window(QMainWindow):
             self.widget.rx_group.setEnabled(True)
             self.widget.cmd_group.setEnabled(True)
         elif upstream.status == Status.BUSY:
+            """
             if downstream.valid_cmd == CmdType.SCAN:  # reflect current target phases druing scanning
                 phases.put(range(0, 16), upstream.curr_phases)
+            """
+            phases.put(range(0, 16), upstream.curr_phases)
             self.widget.tx_group.setEnabled(False)
             self.widget.rx_group.setEnabled(True)
             self.widget.cmd_group.setEnabled(False)
@@ -277,16 +280,16 @@ class Widget(QWidget):
 
             return _groupbox
 
-        for r in range(esa.N):
-            for c in range(esa.M):
-                grid.addWidget(create_single_phase_layout(r, c), r + 1, c)
+        for n in range(esa.N):
+            for m in range(esa.M):
+                grid.addWidget(create_single_phase_layout(n, m), n + 1, m)
 
         def updater():
             dsa_slider.setValue(-loss)
-            for r in range(esa.N):
-                for c in range(esa.M):
-                    val = phases[remap(esa.M * r + c)]
-                    phase_dials[r][c].setValue(val)
+            for n in range(esa.N):
+                for m in range(esa.M):
+                    val = phases[remap(esa.M * n + m)]
+                    phase_dials[n][m].setValue(val)
             Esa.set_phases(reshape_phases(phases))
         timer = QTimer(self)
         timer.timeout.connect(updater)
@@ -427,11 +430,24 @@ class Widget(QWidget):
         # Action Buttons
         hbox0 = QHBoxLayout()
         vbox.addLayout(hbox0)
-        scan_button = QPushButton("Scan")
-        hbox0.addWidget(scan_button)
-        scan_button.setStyleSheet(btn_ss)
-        scan_button.setFixedHeight(50)
-        scan_button.clicked.connect(lambda: downstream.set_cmd(CmdType.SCAN))
+        scan_button1 = QPushButton("Steering Scan")
+        hbox0.addWidget(scan_button1)
+        scan_button1.setStyleSheet(btn_ss)
+        scan_button1.setFixedHeight(50)
+        def steering_scan():
+            downstream.scan_method = 0
+            downstream.cmd = CmdType.SCAN
+        scan_button1.clicked.connect(steering_scan)
+
+        scan_button2 = QPushButton("Full-sweep Scan")
+        hbox0.addWidget(scan_button2)
+        scan_button2.setStyleSheet(btn_ss)
+        scan_button2.setFixedHeight(50)
+        def fullsweep_scan():
+            downstream.scan_method = 1
+            downstream.cmd = CmdType.SCAN
+        scan_button2.clicked.connect(fullsweep_scan)
+
         clear_button = QPushButton("Reset")
         hbox0.addWidget(clear_button)
         clear_button.setStyleSheet(btn_ss)
@@ -443,7 +459,8 @@ class Widget(QWidget):
         vbox.addLayout(hbox1)
 
         def target_button_clicked(i):
-            downstream.set_cmd(CmdType.TARGET_1 + i)
+            downstream.target = i
+            downstream.set_cmd(CmdType.STEER)
             phases.put(range(0, 16), upstream.peri_infos[i].phases)
             np.place(phases, phases < 0, 0)
 

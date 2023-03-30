@@ -34,13 +34,11 @@ class Status(IntEnum):
 
 class CmdType(IntEnum):
     NOP = 0
-    SCAN = auto()
     RESET = auto()
-    TARGET_1 = auto()
-    TARGET_2 = auto()
-    TARGET_3 = auto()
-    TARGET_4 = auto()
-    TARGET_5 = auto()
+    SCAN = auto()
+    STEER = auto()
+    SET_PHASE = auto()
+    SET_LOSS = auto()
 
 
 class Upstream():
@@ -77,6 +75,8 @@ class Downstream():
         self.phases = np.zeros(16, dtype=np.uint8)
         self.loss = 80
         self.peri_mode = 1
+        self.target = 0
+        self.scan_method = 0
 
     def set_cmd(self, cmd):
         self.cmd = cmd
@@ -85,11 +85,27 @@ class Downstream():
 
     @property
     def packed_data(self):
-        data = np.zeros(64, dtype=np.uint8)
-        data.put(0, downstream.cmd)
-        data.put(1, downstream.loss)
-        data.put(2, downstream.peri_mode)
-        data.put(range(8, 8 + len(downstream.phases)), downstream.phases)
+        data = np.zeros(128, dtype=np.uint8)
+        offset = 16
+        def to_packable(v):
+            return list(np.array([v], dtype=np.uint32).tobytes())
+        
+        data.put(range(0, 4), to_packable(downstream.cmd))
+        match downstream.cmd:
+            case CmdType.RESET:
+                pass
+            case CmdType.SCAN:
+                data.put(range(4, 8), to_packable(downstream.scan_method))
+            case CmdType.STEER:
+                data.put(range(4, 8), to_packable(downstream.target))
+            case CmdType.SET_PHASE:
+                offset = 16
+                data.put(range(offset, offset + len(downstream.phases)), downstream.phases)
+            case CmdType.SET_LOSS:
+                data.put(offset, downstream.loss)
+            case _:
+                data[:] = 0
+        #data.put(2, downstream.peri_mode)
         return data.tobytes()
 
 
@@ -180,7 +196,7 @@ def process():
         if downstream.valid_cmd != CmdType.NOP and upstream.status == Status.BUSY:
             downstream.running = True
         if downstream.running is True and upstream.status == Status.READY:
-            if downstream.valid_cmd in [CmdType.TARGET_1, CmdType.TARGET_2, CmdType.TARGET_3, CmdType.TARGET_4, CmdType.TARGET_5]:
+            if downstream.valid_cmd == CmdType.STEER:
                 logging.info(logger.get_csv_string())
             downstream.valid_cmd = CmdType.NOP
             downstream.running = False
