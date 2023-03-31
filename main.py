@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 import os
 import sys
+import time
 import socket
 import logging
 import random
@@ -41,10 +42,13 @@ class CmdType(IntEnum):
     SET_LOSS = auto()
 
 
-class Upstream():
+class Downstream():
     def __init__(self):
         self.status = Status.DISCONN
+        self.cmd_rcvd = CmdType.NOP
+        self.confirm = False
         self.curr_phases = np.zeros(16, dtype=np.int8)
+
         class PeriInfo(object):
             def __init__(self):
                 self.address = np.zeros(6, dtype=np.uint8)
@@ -56,10 +60,12 @@ class Upstream():
         self.peri_infos = [PeriInfo() for _ in range(MAX_RX_NUM)]
 
     def unpack_data(self, data):
-        upstream.status = data[0]
-        upstream.curr_phases = np.frombuffer(data[4:20], dtype=np.int8)
+        self.status = data[0]
+        self.cmd_rcvd = data[2]
+        self.confirm = data[3]
+        self.curr_phases = np.frombuffer(data[4:20], dtype=np.int8)
         o = 128
-        for peri_info in upstream.peri_infos:
+        for peri_info in self.peri_infos:
             peri_info.address = np.frombuffer(data[o: o + 6], dtype=np.uint8)
             peri_info.rfdc_adc, peri_info.bat_adc = np.frombuffer(data[o + 8: o + 12], dtype=np.uint16)
             peri_info.phases = np.frombuffer(data[o + 12: o + 28], dtype=np.int8)
@@ -67,7 +73,7 @@ class Upstream():
             o += 128
 
 
-class Downstream():
+class Upstream():
     def __init__(self):
         self.cmd = CmdType.NOP
         self.valid_cmd = CmdType.NOP
@@ -87,25 +93,24 @@ class Downstream():
     def packed_data(self):
         data = np.zeros(128, dtype=np.uint8)
         offset = 16
-        def to_packable(v):
-            return list(np.array([v], dtype=np.uint32).tobytes())
-        
-        data.put(range(0, 4), to_packable(downstream.cmd))
-        match downstream.cmd:
+
+        def to_packable(v, dtype=np.uint32):
+            return list(np.array(v, dtype=dtype).tobytes())
+
+        data.put(range(0, 4), to_packable(self.cmd))
+        match self.cmd:
             case CmdType.RESET:
                 pass
             case CmdType.SCAN:
-                data.put(range(4, 8), to_packable(downstream.scan_method))
+                data.put(range(4, 8), to_packable(self.scan_method))
             case CmdType.STEER:
-                data.put(range(4, 8), to_packable(downstream.target))
+                data.put(range(4, 8), to_packable(self.target))
             case CmdType.SET_PHASE:
-                offset = 16
-                data.put(range(offset, offset + len(downstream.phases)), downstream.phases)
+                data.put(range(offset, offset + len(self.phases)), self.phases)
             case CmdType.SET_LOSS:
-                data.put(offset, downstream.loss)
+                data.put(offset, self.loss)
             case _:
                 data[:] = 0
-        #data.put(2, downstream.peri_mode)
         return data.tobytes()
 
 
@@ -151,7 +156,7 @@ class Logger():
 
     def get_csv_string(self):
         s = ""
-        for i, peri in enumerate(upstream.peri_infos):
+        for i, peri in enumerate(downstream.peri_infos):
             if peri.address[0] == 0:
                 continue
             s += f"{i + 1}, {peri.r}, {peri.theta_d}, {peri.phi_d}"
@@ -164,7 +169,7 @@ class Logger():
             self.tops_p_watt = random.randint(580, 590) / 1000
             s += f", {self.ccp}, {self.scanning_rate}, {self.tops_p_watt}\n"
         return s
-    
+
     def get_log_string(self):
         s = f"MCP: {logger.ccp}uA/MHz  |  " +\
             f"Scanning Rate: {logger.scanning_rate:5.2f}ms  |  " +\
@@ -179,27 +184,35 @@ logger = Logger()
 
 
 def process():
-    while True:
-        server.sock.sendto(downstream.packed_data, server.client_addr)
-        downstream.cmd = CmdType.NOP
-
+    def update_downstream():
         try:
             data, _ = server.sock.recvfrom(1248)
+            downstream.unpack_data(data)
         except Exception:
-            upstream.status = Status.DISCONN
+            downstream.status = Status.DISCONN
             print(f"{Fore.CYAN}Waiting for client packet{Fore.RESET}")
-            continue
+        return downstream.status
 
-        upstream.unpack_data(data)
+    while True:
+        server.sock.sendto(upstream.packed_data, server.client_addr)
+        if upstream.cmd != CmdType.NOP:
+            print(upstream.packed_data[:16])
+        if update_downstream() == Status.DISCONN:
+            continue
+        upstream.cmd = CmdType.NOP
+        # print(upstream.packed_data[:12])
+        # print(upstream.packed_data[16:32])
+        time.sleep(0.02)
+        # print(downstream.status, downstream.curr_phases)
 
         # print(f"cmd: {command.cmd} | valid cmd: {command.valid_cmd} | running: {command.running} | status: {stream.status}")
-        if downstream.valid_cmd != CmdType.NOP and upstream.status == Status.BUSY:
-            downstream.running = True
-        if downstream.running is True and upstream.status == Status.READY:
-            if downstream.valid_cmd == CmdType.STEER:
+        if upstream.valid_cmd != CmdType.NOP and downstream.status == Status.BUSY:
+            upstream.running = True
+        if upstream.running is True and downstream.status == Status.READY:
+            if upstream.valid_cmd == CmdType.STEER:
                 logging.info(logger.get_csv_string())
-            downstream.valid_cmd = CmdType.NOP
-            downstream.running = False
+            upstream.valid_cmd = CmdType.NOP
+            upstream.running = False
             logger.done = True
 
 

@@ -88,18 +88,18 @@ class Window(QMainWindow):
         self.show()
 
     def updater(self):
-        downstream.loss = loss
-        if upstream.status == Status.READY:
-            downstream.phases = phases.copy()  # copy stream data to gui data
+        upstream.loss = loss
+        if downstream.status == Status.READY:
+            upstream.phases = phases.copy()  # copy stream data to gui data
             self.widget.tx_group.setEnabled(True)
             self.widget.rx_group.setEnabled(True)
             self.widget.cmd_group.setEnabled(True)
-        elif upstream.status == Status.BUSY:
+        elif downstream.status == Status.BUSY:
             """
-            if downstream.valid_cmd == CmdType.SCAN:  # reflect current target phases druing scanning
-                phases.put(range(0, 16), upstream.curr_phases)
+            if upstream.valid_cmd == CmdType.SCAN:  # reflect current target phases druing scanning
+                phases.put(range(0, 16), downstream.curr_phases)
             """
-            phases.put(range(0, 16), upstream.curr_phases)
+            phases.put(range(0, 16), downstream.curr_phases)
             self.widget.tx_group.setEnabled(False)
             self.widget.rx_group.setEnabled(True)
             self.widget.cmd_group.setEnabled(False)
@@ -107,13 +107,13 @@ class Window(QMainWindow):
             self.widget.tx_group.setEnabled(False)
             self.widget.rx_group.setEnabled(False)
             self.widget.cmd_group.setEnabled(False)
-        self.statusbar.showMessage(Status.string_by_val(upstream.status))
+        self.statusbar.showMessage(Status.string_by_val(downstream.status))
 
         if logger.done:
             logger.done = False
             # self.widget.te.append(logger.get_log_string())
             for i, receiver in enumerate(receivers):
-                _phases = upstream.peri_infos[i].phases
+                _phases = downstream.peri_infos[i].phases
                 if all(_phases == -1):
                     receiver.r = 0
                     continue
@@ -243,7 +243,7 @@ class Widget(QWidget):
         mode_combobox.addItems(["Charging", "Scanning"])
         mode_combobox.setCurrentIndex(1)
         def combobox_changed():
-            downstream.peri_mode = mode_combobox.currentIndex()
+            upstream.peri_mode = mode_combobox.currentIndex()
         mode_combobox.currentIndexChanged.connect(combobox_changed)
         vbox3.addWidget(QLabel())  # dummy for layout
 
@@ -275,6 +275,7 @@ class Widget(QWidget):
                     return
                 label.setText(f"{dial.value():2}")
                 phases.put(idx, dial.value())
+                upstream.cmd = CmdType.SET_PHASE
             dial.valueChanged.connect(dial_changed)
             dial_changed()
 
@@ -376,7 +377,7 @@ class Widget(QWidget):
             pos_grid = QGridLayout()
             grid.addLayout(pos_grid, 4, idx)
             x_le, y_le, z_le = QLineEdit(), QLineEdit(), QLineEdit()
-            peri_info = upstream.peri_infos[idx - 1]
+            peri_info = downstream.peri_infos[idx - 1]
             for i, le in enumerate([x_le, y_le, z_le]):
                 le.setFixedWidth(50)
                 le.setValidator(QIntValidator())
@@ -401,7 +402,7 @@ class Widget(QWidget):
 
         def updater():
             bat_adc_min, bat_adc_max = 3000, 4095
-            for i, peri in enumerate(upstream.peri_infos):
+            for i, peri in enumerate(downstream.peri_infos):
                 level = get_level(peri.rfdc_adc)
                 rx_widgets[i]['rfdc_img'].setPixmap(pixmaps[level])
                 rx_widgets[i]['rfdc_label'].setText(f"{peri.rfdc_adc}")
@@ -435,8 +436,8 @@ class Widget(QWidget):
         scan_button1.setStyleSheet(btn_ss)
         scan_button1.setFixedHeight(50)
         def steering_scan():
-            downstream.scan_method = 0
-            downstream.cmd = CmdType.SCAN
+            upstream.scan_method = 0
+            upstream.cmd = CmdType.SCAN
         scan_button1.clicked.connect(steering_scan)
 
         scan_button2 = QPushButton("Full-sweep Scan")
@@ -444,25 +445,26 @@ class Widget(QWidget):
         scan_button2.setStyleSheet(btn_ss)
         scan_button2.setFixedHeight(50)
         def fullsweep_scan():
-            downstream.scan_method = 1
-            downstream.cmd = CmdType.SCAN
+            upstream.scan_method = 1
+            upstream.cmd = CmdType.SCAN
         scan_button2.clicked.connect(fullsweep_scan)
 
         clear_button = QPushButton("Reset")
         hbox0.addWidget(clear_button)
         clear_button.setStyleSheet(btn_ss)
         clear_button.setFixedHeight(50)
-        clear_button.clicked.connect(lambda: (downstream.set_cmd(CmdType.RESET), phases.fill(0)))
+        clear_button.clicked.connect(lambda: (upstream.set_cmd(CmdType.RESET), phases.fill(0)))
         clear_button.setShortcut('0')
 
         hbox1 = QHBoxLayout()
         vbox.addLayout(hbox1)
 
         def target_button_clicked(i):
-            downstream.target = i
-            downstream.set_cmd(CmdType.STEER)
-            phases.put(range(0, 16), upstream.peri_infos[i].phases)
-            np.place(phases, phases < 0, 0)
+            upstream.target = i
+            upstream.set_cmd(CmdType.STEER)
+            phases.put(range(0, 16), downstream.peri_infos[i].phases)
+            phases[phases < 0] = 0
+            #np.place(phases, phases < 0, 0)
 
         for i in range(MAX_RX_NUM):
             button = QPushButton(f"Rx #{i + 1}")
