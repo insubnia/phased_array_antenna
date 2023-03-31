@@ -73,10 +73,13 @@ class Esa():
 
     @staticmethod
     def get_vector(phases):
+        class _Vector():
+            def __init__(self, theta, phi):
+                self.theta = theta
+                self.phi = phi
         pattern_data = Esa.get_pattern_data_by_phased_array(phases)
         idx = np.unravel_index(np.argmax(pattern_data, axis=None), pattern_data.shape)
-        theta_d, phi_d = np.rad2deg(THETA[idx]), np.rad2deg(PHI[idx])
-        return theta_d, phi_d
+        return _Vector(np.rad2deg(THETA[idx]), np.rad2deg(PHI[idx]))
 
     @staticmethod
     def get_pattern_data_by_target_angle(theta_d, phi_d):

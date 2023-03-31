@@ -113,12 +113,12 @@ class Window(QMainWindow):
             logger.done = False
             # self.widget.te.append(logger.get_log_string())
             for i, receiver in enumerate(receivers):
-                _phases = downstream.peri_infos[i].phases
-                if all(_phases == -1):
+                peri_info = downstream.peri_infos[i]
+                if peri_info.address[0] == 0:
                     receiver.r = 0
                     continue
-                vector = Esa.get_vector(reshape_phases(_phases))
-                receiver.set_spherical_coord(125, vector[0], vector[1])
+                vector = Esa.get_vector(reshape_phases(peri_info.phases))
+                receiver.set_spherical_coord(125, vector.theta, vector.phi)
 
 
 class Widget(QWidget):

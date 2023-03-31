@@ -16,6 +16,7 @@ if not os.path.exists(LOG_DIR):
 
 MAX_RX_NUM = 5
 
+
 class Status(IntEnum):
     READY = 0
     BUSY = 1
@@ -44,7 +45,7 @@ class CmdType(IntEnum):
 
 class Downstream():
     def __init__(self):
-        self.status = Status.DISCONN
+        self.status = Status.READY
         self.cmd_rcvd = CmdType.NOP
         self.confirm = False
         self.curr_phases = np.zeros(16, dtype=np.int8)
@@ -77,6 +78,7 @@ class Upstream():
     def __init__(self):
         self.cmd = CmdType.NOP
         self.valid_cmd = CmdType.NOP
+        self.cmd_prev = CmdType.NOP
         self.running = False
         self.phases = np.zeros(16, dtype=np.uint8)
         self.loss = 80
@@ -188,22 +190,24 @@ def process():
         try:
             data, _ = server.sock.recvfrom(1248)
             downstream.unpack_data(data)
-        except Exception:
+        except TimeoutError:
             downstream.status = Status.DISCONN
             print(f"{Fore.CYAN}Waiting for client packet{Fore.RESET}")
         return downstream.status
 
-    while True:
+    def send_and_receive():
         server.sock.sendto(upstream.packed_data, server.client_addr)
-        if upstream.cmd != CmdType.NOP:
-            print(upstream.packed_data[:16])
-        if update_downstream() == Status.DISCONN:
+        update_downstream()
+
+    while True:
+        send_and_receive()
+        if downstream.status == Status.DISCONN:
             continue
+        elif upstream.cmd != CmdType.NOP and downstream.status != Status.BUSY:
+            continue
+        upstream.cmd_prev = upstream.cmd
         upstream.cmd = CmdType.NOP
-        # print(upstream.packed_data[:12])
-        # print(upstream.packed_data[16:32])
-        time.sleep(0.02)
-        # print(downstream.status, downstream.curr_phases)
+        time.sleep(0.01)
 
         # print(f"cmd: {command.cmd} | valid cmd: {command.valid_cmd} | running: {command.running} | status: {stream.status}")
         if upstream.valid_cmd != CmdType.NOP and downstream.status == Status.BUSY:
