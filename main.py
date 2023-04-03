@@ -139,6 +139,7 @@ class Logger():
         self.ccp = 0
         self.scanning_rate = 0
         self.tops_p_watt = 0
+        self.scan_done = False
 
         now = datetime.now()
         logging.basicConfig(filename=f"{LOG_DIR}/{now.strftime('%Y%m%d_%H%M%S')}.csv",
@@ -210,12 +211,15 @@ def process():
             pass
         elif downstream.status_prev == 1 and downstream.status == 0:
             pass
+            match upstream.cmd_prev:
+                case CmdType.SCAN:
+                    logger.scan_done = True
 
         if upstream.cmd != CmdType.NOP:
             upstream.cmd_prev = upstream.cmd
             upstream.cmd = CmdType.NOP
         downstream.status_prev = downstream.status
-        time.sleep(0.01)
+        time.sleep(0.02)
 
         # print(f"cmd: {command.cmd} | valid cmd: {command.valid_cmd} | running: {command.running} | status: {stream.status}")
         if upstream.valid_cmd != CmdType.NOP and downstream.status == Status.BUSY:

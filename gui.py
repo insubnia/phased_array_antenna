@@ -84,7 +84,7 @@ class Window(QMainWindow):
 
         timer = QTimer(self)
         timer.timeout.connect(self.updater)
-        timer.start(50)
+        timer.start(10)
         self.show()
 
     def updater(self):
@@ -108,8 +108,8 @@ class Window(QMainWindow):
             self.widget.cmd_group.setEnabled(False)
         self.statusbar.showMessage(Status.string_by_val(downstream.status))
 
-        if logger.done:
-            logger.done = False
+        if logger.scan_done:
+            logger.scan_done = False
             # self.widget.te.append(logger.get_log_string())
             for i, receiver in enumerate(receivers):
                 peri_info = downstream.peri_infos[i]
@@ -250,8 +250,8 @@ class Widget(QWidget):
         """ Phase dials
         """
         phase_dials = np.ndarray((esa.N, esa.M), dtype='O')
-        def create_single_phase_layout(r, c):
-            idx = remap(esa.M * r + c)
+        def create_single_phase_layout(n, m):
+            idx = remap(esa.M * n + m)
             _groupbox = QGroupBox(f"Tx {idx}")
             _groupbox.setFlat(True)
             _groupbox.setFixedSize(100, 140)
@@ -264,7 +264,7 @@ class Widget(QWidget):
             label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             label.setFixedHeight(13)
 
-            dial = phase_dials[r][c] = QDial()
+            dial = phase_dials[n][m] = QDial()
             grid.addWidget(dial, 0, 0)
             dial.setNotchesVisible(True)
             dial.setWrapping(True)
@@ -276,8 +276,8 @@ class Widget(QWidget):
                 label.setText(f"{dial.value():2}")
                 phases.put(idx, dial.value())
                 upstream.cmd = CmdType.SET_PHASE
-            dial.valueChanged.connect(dial_changed)
-            dial_changed()
+            # dial.valueChanged.connect(dial_changed)
+            # dial_changed()
 
             return _groupbox
 
