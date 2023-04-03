@@ -46,6 +46,7 @@ class CmdType(IntEnum):
 class Downstream():
     def __init__(self):
         self.status = Status.READY
+        self.status_prev = Status.READY
         self.cmd_rcvd = CmdType.NOP
         self.confirm = False
         self.curr_phases = np.zeros(16, dtype=np.int8)
@@ -201,12 +202,19 @@ def process():
 
     while True:
         send_and_receive()
-        if downstream.status == Status.DISCONN:
+        if ((downstream.status == Status.DISCONN) or
+            (upstream.cmd != CmdType.NOP and downstream.status != Status.BUSY)):
             continue
-        elif upstream.cmd != CmdType.NOP and downstream.status != Status.BUSY:
-            continue
-        upstream.cmd_prev = upstream.cmd
-        upstream.cmd = CmdType.NOP
+
+        if downstream.status_prev == 0 and downstream.status == 1:
+            pass
+        elif downstream.status_prev == 1 and downstream.status == 0:
+            pass
+
+        if upstream.cmd != CmdType.NOP:
+            upstream.cmd_prev = upstream.cmd
+            upstream.cmd = CmdType.NOP
+        downstream.status_prev = downstream.status
         time.sleep(0.01)
 
         # print(f"cmd: {command.cmd} | valid cmd: {command.valid_cmd} | running: {command.running} | status: {stream.status}")

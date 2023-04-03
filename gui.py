@@ -38,21 +38,21 @@ def remap(x):
 
 def reshape_phases(_phases):
     sim_phases = np.ndarray((esa.N, esa.M), dtype=float)
-    for r in range(esa.N):
-        for c in range(esa.M):
-            val = _phases[remap(esa.M * r + c)]
-            sim_phases[r][c] =  0 if val == -1 else val * 22.5
+    for n in range(esa.N):
+        for m in range(esa.M):
+            val = _phases[remap(esa.M * n + m)]
+            sim_phases[n][m] =  0 if val == -1 else val * 22.5
     return sim_phases
 
 
 def get_phase_display_string(arr1d=None, string=""):
     if arr1d is None:
         arr1d = phases
-    for r in range(esa.N):
-        string += "\n" if r > 0 else ""
-        for c in range(esa.M):
-            string += " " if c > 0 else ""
-            code = arr1d[remap(esa.M * r + c)]
+    for n in range(esa.N):
+        string += "\n" if n > 0 else ""
+        for m in range(esa.M):
+            string += " " if m > 0 else ""
+            code = arr1d[remap(esa.M * n + m)]
             string += f"{code:2d}"
     return string
 
@@ -88,7 +88,6 @@ class Window(QMainWindow):
         self.show()
 
     def updater(self):
-        upstream.loss = loss
         if downstream.status == Status.READY:
             upstream.phases = phases.copy()  # copy stream data to gui data
             self.widget.tx_group.setEnabled(True)
@@ -187,7 +186,8 @@ class Widget(QWidget):
             val = dsa_slider.value()
             esa.set_amplitude(4 + 6 * (127 + val) / 127)
             dsa_label.setText(f"{val * 0.25:.2f} dB")
-            loss = -val
+            upstream.loss = loss = -val
+            upstream.cmd = CmdType.SET_LOSS
         dsa_slider.valueChanged.connect(dsa_changed)
         dsa_slider.setValue(-loss)
         QShortcut(QKeySequence('['), self, lambda: dsa_slider.setValue(dsa_slider.value() + 1))
