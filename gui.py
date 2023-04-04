@@ -1,7 +1,6 @@
 #!/opt/homebrew/bin/python3
 import os
 import sys
-import time
 import threading
 import numpy as np
 from functools import partial
@@ -74,13 +73,10 @@ class Window(QMainWindow):
         QShortcut(QKeySequence('Ctrl+W'), self, self.close)
 
         self.statusbar = self.statusBar()
-        self.statusbar.showMessage("Ready")
 
         streamer = threading.Thread(target=process)
         streamer.daemon = True
         streamer.start()
-
-        time.sleep(0.5)
 
         timer = QTimer(self)
         timer.timeout.connect(self.updater)
@@ -158,7 +154,7 @@ class Widget(QWidget):
 
     def create_tx_group(self):
         groupbox = QGroupBox("Tx System")
-        groupbox.setFixedSize(430, 720)
+        groupbox.setFixedSize(430, 610)
         self.style_groupbox(groupbox)
 
         grid = QGridLayout()
@@ -285,7 +281,7 @@ class Widget(QWidget):
             for m in range(esa.M):
                 grid.addWidget(create_single_phase_layout(n, m), n + 1, m)
 
-        def updater():
+        def phase_updater():
             dsa_slider.setValue(-loss)
             for n in range(esa.N):
                 for m in range(esa.M):
@@ -293,14 +289,14 @@ class Widget(QWidget):
                     phase_dials[n][m].setValue(val)
             Esa.set_phases(reshape_phases(phases))
         timer = QTimer(self)
-        timer.timeout.connect(updater)
+        timer.timeout.connect(phase_updater)
         timer.start(100)
 
         return groupbox
 
     def create_rx_group(self):
         groupbox = QGroupBox("Rx System")
-        groupbox.setFixedSize(550, 470)
+        groupbox.setFixedSize(550, 450)
         self.style_groupbox(groupbox)
 
         grid = QGridLayout()
@@ -377,13 +373,12 @@ class Widget(QWidget):
             pos_grid = QGridLayout()
             grid.addLayout(pos_grid, 4, idx)
             r_le, theta_le, phi_le = QLineEdit(), QLineEdit(), QLineEdit()
+            _widgets['vector'] = { 'r': r_le, 'theta': theta_le, 'phi': phi_le, }
             for i, le in enumerate([r_le, theta_le, phi_le]):
                 le.setFixedWidth(50)
-                le.setText("0")
                 # le.setValidator(QIntValidator())
                 le.setReadOnly(True)
                 pos_grid.addWidget(le, i, 1)
-            _widgets['vector'] = { 'r': r_le, 'theta': theta_le, 'phi': phi_le, }
 
         for i in range(MAX_RX_NUM):
             create_rx_column(i + 1)
@@ -398,7 +393,7 @@ class Widget(QWidget):
                     return i
             return section_num - 1
 
-        def updater():
+        def rx_updater():
             bat_adc_min, bat_adc_max = 3000, 4095
             for i, peri in enumerate(downstream.peri_infos):
                 w = rx_widgets[i]
@@ -411,12 +406,12 @@ class Widget(QWidget):
                 w['bat_pbar'].setValue(bat_pct)
                 w['bat_label'].setText(f"{peri.bat_adc}")
                 w['profile_label'].setText(get_phase_display_string(peri.phases))
-                w['vector']['r'].setText(f"N/A")
+                w['vector']['r'].setText(f"N/A")  # TODO: replace with RSSI
                 w['vector']['theta'].setText(f"{peri.theta_d:.0f}")
                 w['vector']['phi'].setText(f"{peri.phi_d:.0f}")
 
         timer = QTimer(self)
-        timer.timeout.connect(updater)
+        timer.timeout.connect(rx_updater)
         timer.start(100)
 
         return groupbox
