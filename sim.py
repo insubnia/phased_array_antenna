@@ -156,11 +156,15 @@ receivers = [Receiver(f"Rx#{i + 1}") for i in range(5)]
 
 
 def update(frame):
+    global theata0, phi0
     if 0:
         R = Esa.get_pattern_data_by_target_angle(theta0, phi0)
     else:
         # phases = Esa.get_desired_phase(theta0, phi0)
         R = Esa.get_pattern_data_by_phased_array(phases)
+        v = Esa.get_vector(phases)
+        theta0, phi0 = v.theta, v.phi
+
     X, Y, Z = spherical_to_cartesian(R, THETA, PHI)
 
     global surf
@@ -168,7 +172,7 @@ def update(frame):
         surf.remove()
     surf = ax.plot_surface(X, Y, Z, cmap=plt.get_cmap('jet'),
                            alpha=0.3, linewidth=0.1, rstride=1, cstride=1, aa=True)
-    # text.set_text(f"θ: {theta0}° \nϕ: {phi0}°")
+    text.set_text(f"θ: {theta0:7.0f}°\nϕ: {phi0:7.0f}°")
 
     for receiver in receivers:
         receiver.update_plot()
@@ -200,7 +204,7 @@ def plot_sim():
             ax.text(xms[m], yns[n], 0, f"{M * n + m}", c='g', size=7, ha='center', va='center')
 
     global text
-    text = ax.text(xms[-1] + dx / 2, yns[-1] + dy / 2, 0, "")
+    text = ax.text(xms[-1] + dx / 4, yns[0] + dy / 4, 0, "", ha='left', va='bottom')
 
     for receiver in receivers:
         receiver.init_on_axis(ax)
