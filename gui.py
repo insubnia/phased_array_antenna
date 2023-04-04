@@ -10,7 +10,7 @@ from PyQt6.QtCore import *
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 
 from main import process, upstream, downstream, Status, Command, logger, MAX_RX_NUM
-from sim import Esa, plot_sim, receivers
+from sim import Esa, receivers
 
 phases = np.zeros(16, dtype=np.int8)
 loss = 127
@@ -147,7 +147,7 @@ class Widget(QWidget):
         groupbox.setStyleSheet(groupbox_ss)
 
     def create_canvas(self):
-        fig = plot_sim()
+        fig = esa.plot()
         canvas = FigureCanvas(fig)
         canvas.draw()
         return canvas
