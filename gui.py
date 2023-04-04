@@ -10,7 +10,7 @@ from PyQt6.QtGui import *
 from PyQt6.QtCore import *
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 
-from main import process, upstream, downstream, Status, CmdType, logger, MAX_RX_NUM
+from main import process, upstream, downstream, Status, Command, logger, MAX_RX_NUM
 from sim import Esa, plot_sim, receivers
 
 phases = np.zeros(16, dtype=np.int8)
@@ -28,10 +28,10 @@ def resource_path(relative_path):
 
 def remap(x):
     table = (
-        0, 4, 8, 12,  
-        1, 5, 9, 13,  
-        2, 6, 10, 14,  
-        3, 7, 11, 15,  
+        0, 1, 2, 3,
+        4, 5, 6, 7,
+        8, 9, 10, 11,
+        12, 13, 14, 15,
     )
     return table[x]
 
@@ -89,15 +89,11 @@ class Window(QMainWindow):
 
     def updater(self):
         if downstream.status == Status.READY:
-            upstream.phases = phases.copy()  # copy stream data to gui data
+            upstream.phases = phases.copy()
             self.widget.tx_group.setEnabled(True)
             self.widget.rx_group.setEnabled(True)
             self.widget.cmd_group.setEnabled(True)
         elif downstream.status == Status.BUSY:
-            """
-            if upstream.valid_cmd == CmdType.SCAN:  # reflect current target phases druing scanning
-                phases.put(range(0, 16), downstream.curr_phases)
-            """
             phases.put(range(0, 16), downstream.curr_phases)
             self.widget.tx_group.setEnabled(False)
             self.widget.rx_group.setEnabled(True)
@@ -106,7 +102,7 @@ class Window(QMainWindow):
             self.widget.tx_group.setEnabled(False)
             self.widget.rx_group.setEnabled(False)
             self.widget.cmd_group.setEnabled(False)
-        self.statusbar.showMessage(Status.string_by_val(downstream.status))
+        self.statusbar.showMessage(Status(downstream.status).name.lower())
 
         if logger.scan_done:
             logger.scan_done = False
@@ -115,9 +111,13 @@ class Window(QMainWindow):
                 peri_info = downstream.peri_infos[i]
                 if peri_info.address[0] == 0:
                     receiver.r = 0
+                    peri_info.theta_d = 0
+                    peri_info.phi_d = 0
                     continue
                 vector = Esa.get_vector(reshape_phases(peri_info.phases))
                 receiver.set_spherical_coord(125, vector.theta, vector.phi)
+                peri_info.theta_d = vector.theta
+                peri_info.phi_d = vector.phi
 
 
 class Widget(QWidget):
@@ -187,7 +187,7 @@ class Widget(QWidget):
             esa.set_amplitude(4 + 6 * (127 + val) / 127)
             dsa_label.setText(f"{val * 0.25:.2f} dB")
             upstream.loss = loss = -val
-            upstream.cmd = CmdType.SET_LOSS
+            upstream.cmd = Command.SET_LOSS
         dsa_slider.valueChanged.connect(dsa_changed)
         dsa_slider.setValue(-loss)
         QShortcut(QKeySequence('['), self, lambda: dsa_slider.setValue(dsa_slider.value() + 1))
@@ -275,7 +275,7 @@ class Widget(QWidget):
                     return
                 label.setText(f"{dial.value():2}")
                 phases.put(idx, dial.value())
-                upstream.cmd = CmdType.SET_PHASE
+                upstream.cmd = Command.SET_PHASE
             # dial.valueChanged.connect(dial_changed)
             # dial_changed()
 
@@ -376,16 +376,14 @@ class Widget(QWidget):
             """
             pos_grid = QGridLayout()
             grid.addLayout(pos_grid, 4, idx)
-            x_le, y_le, z_le = QLineEdit(), QLineEdit(), QLineEdit()
-            peri_info = downstream.peri_infos[idx - 1]
-            for i, le in enumerate([x_le, y_le, z_le]):
+            r_le, theta_le, phi_le = QLineEdit(), QLineEdit(), QLineEdit()
+            for i, le in enumerate([r_le, theta_le, phi_le]):
                 le.setFixedWidth(50)
-                le.setValidator(QIntValidator())
                 le.setText("0")
+                # le.setValidator(QIntValidator())
+                le.setReadOnly(True)
                 pos_grid.addWidget(le, i, 1)
-            x_le.returnPressed.connect(lambda: setattr(peri_info, 'r', float(x_le.text())))
-            y_le.returnPressed.connect(lambda: setattr(peri_info, 'theta_d', float(y_le.text())))
-            z_le.returnPressed.connect(lambda: setattr(peri_info, 'phi_d', float(z_le.text())))
+            _widgets['vector'] = { 'r': r_le, 'theta': theta_le, 'phi': phi_le, }
 
         for i in range(MAX_RX_NUM):
             create_rx_column(i + 1)
@@ -403,14 +401,19 @@ class Widget(QWidget):
         def updater():
             bat_adc_min, bat_adc_max = 3000, 4095
             for i, peri in enumerate(downstream.peri_infos):
+                w = rx_widgets[i]
                 level = get_level(peri.rfdc_adc)
-                rx_widgets[i]['rfdc_img'].setPixmap(pixmaps[level])
-                rx_widgets[i]['rfdc_label'].setText(f"{peri.rfdc_adc}")
                 bat_adc = min(bat_adc_max, max(bat_adc_min, peri.bat_adc))
                 bat_pct = int((bat_adc - bat_adc_min) / (bat_adc_max - bat_adc_min) * 100)
-                rx_widgets[i]['bat_pbar'].setValue(bat_pct)
-                rx_widgets[i]['bat_label'].setText(f"{peri.bat_adc}")
-                rx_widgets[i]['profile_label'].setText(get_phase_display_string(peri.phases))
+
+                w['rfdc_img'].setPixmap(pixmaps[level])
+                w['rfdc_label'].setText(f"{peri.rfdc_adc}")
+                w['bat_pbar'].setValue(bat_pct)
+                w['bat_label'].setText(f"{peri.bat_adc}")
+                w['profile_label'].setText(get_phase_display_string(peri.phases))
+                w['vector']['r'].setText(f"N/A")
+                w['vector']['theta'].setText(f"{peri.theta_d:.0f}")
+                w['vector']['phi'].setText(f"{peri.phi_d:.0f}")
 
         timer = QTimer(self)
         timer.timeout.connect(updater)
@@ -437,7 +440,7 @@ class Widget(QWidget):
         scan_button1.setFixedHeight(50)
         def steering_scan():
             upstream.scan_method = 0
-            upstream.cmd = CmdType.SCAN
+            upstream.cmd = Command.SCAN
         scan_button1.clicked.connect(steering_scan)
 
         scan_button2 = QPushButton("Full-sweep Scan")
@@ -446,14 +449,14 @@ class Widget(QWidget):
         scan_button2.setFixedHeight(50)
         def fullsweep_scan():
             upstream.scan_method = 1
-            upstream.cmd = CmdType.SCAN
+            upstream.cmd = Command.SCAN
         scan_button2.clicked.connect(fullsweep_scan)
 
         clear_button = QPushButton("Reset")
         hbox0.addWidget(clear_button)
         clear_button.setStyleSheet(btn_ss)
         clear_button.setFixedHeight(50)
-        clear_button.clicked.connect(lambda: (upstream.set_cmd(CmdType.RESET), phases.fill(0)))
+        clear_button.clicked.connect(lambda: (upstream.set_cmd(Command.RESET), phases.fill(0)))
         clear_button.setShortcut('0')
 
         hbox1 = QHBoxLayout()
@@ -461,7 +464,7 @@ class Widget(QWidget):
 
         def target_button_clicked(i):
             upstream.target = i
-            upstream.set_cmd(CmdType.STEER)
+            upstream.set_cmd(Command.STEER)
             phases.put(range(0, 16), downstream.peri_infos[i].phases)
             phases[phases < 0] = 0
             #np.place(phases, phases < 0, 0)

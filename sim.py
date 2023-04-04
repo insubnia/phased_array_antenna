@@ -88,7 +88,7 @@ class Esa():
         r = np.zeros(np.shape(PHI))
         for n, yn in enumerate(yns):
             for m, xm in enumerate(xms):
-                r = r + weights[m][n] * np.exp(1j * (
+                r = r + weights[n][m] * np.exp(1j * (
                     k * (xm * (u(THETA, PHI) - u0) + yn * (v(THETA, PHI) - v0))
                 ))
         return abs(r)
@@ -99,9 +99,9 @@ class Esa():
         r = np.zeros(np.shape(PHI))
         for n, yn in enumerate(yns):
             for m, xm in enumerate(xms):
-                r = r + weights[m][n] * np.exp(1j * (
+                r = r + weights[n][m] * np.exp(1j * (
                     k * (xm * u(THETA, PHI) + yn * v(THETA, PHI)) +
-                    phase[m][n]
+                    phase[n][m]
                 ))
         return abs(r)
 
@@ -109,10 +109,10 @@ class Esa():
     def get_desired_phase(theta_d, phi_d):
         theta_r, phi_r = np.deg2rad(theta_d), np.deg2rad(phi_d)
         phase_d = np.ndarray((N, M))
-        for m, xm in enumerate(xms):
-            for n, yn in enumerate(yns):
+        for n, yn in enumerate(yns):
+            for m, xm in enumerate(xms):
                 cmplx = np.exp(-1j * k * (xm * u(theta_r, phi_r) + yn * v(theta_r, phi_r)))
-                phase_d[m][n] = np.angle(cmplx, deg=True)
+                phase_d[n][m] = np.angle(cmplx, deg=True)
         return phase_d
 
 

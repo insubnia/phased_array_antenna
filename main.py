@@ -20,21 +20,10 @@ MAX_RX_NUM = 5
 class Status(IntEnum):
     READY = 0
     BUSY = 1
-    DISCONN = 255
-
-    @classmethod
-    def string_by_val(cls, val):
-        if val == cls.READY:
-            return "Ready"
-        elif val == cls.BUSY:
-            return "Busy"
-        elif val == cls.DISCONN:
-            return "Disconnected"
-        else:
-            return ""
+    DISCONNECTED = 255
 
 
-class CmdType(IntEnum):
+class Command(IntEnum):
     NOP = 0
     RESET = auto()
     SCAN = auto()
@@ -43,11 +32,53 @@ class CmdType(IntEnum):
     SET_LOSS = auto()
 
 
+class Upstream():
+    def __init__(self):
+        self.cmd = Command.NOP
+        self.valid_cmd = Command.NOP
+        self.cmd_prev = Command.NOP
+        self.running = False
+        self.phases = np.zeros(16, dtype=np.uint8)
+        self.loss = 80
+        self.peri_mode = 1
+        self.target = 0
+        self.scan_method = 0
+
+    def set_cmd(self, cmd):
+        self.cmd = cmd
+        if cmd != Command.NOP:
+            self.valid_cmd = cmd
+
+    @property
+    def packed_data(self):
+        data = np.zeros(128, dtype=np.uint8)
+        offset = 16
+
+        def to_packable(v, dtype=np.uint32):
+            return list(np.array(v, dtype=dtype).tobytes())
+
+        data.put(range(0, 4), to_packable(self.cmd))
+        match self.cmd:
+            case Command.RESET:
+                pass
+            case Command.SCAN:
+                data.put(range(4, 8), to_packable(self.scan_method))
+            case Command.STEER:
+                data.put(range(4, 8), to_packable(self.target))
+            case Command.SET_PHASE:
+                data.put(range(offset, offset + len(self.phases)), self.phases)
+            case Command.SET_LOSS:
+                data.put(offset, self.loss)
+            case _:
+                data[:] = 0
+        return data.tobytes()
+
+
 class Downstream():
     def __init__(self):
         self.status = Status.READY
         self.status_prev = Status.READY
-        self.cmd_rcvd = CmdType.NOP
+        self.cmd_rcvd = Command.NOP
         self.confirm = False
         self.curr_phases = np.zeros(16, dtype=np.int8)
 
@@ -73,48 +104,6 @@ class Downstream():
             peri_info.phases = np.frombuffer(data[o + 12: o + 28], dtype=np.int8)
             peri_info.rfdc_ranges = np.frombuffer(data[o + 28: o + 60], dtype=np.uint16)
             o += 128
-
-
-class Upstream():
-    def __init__(self):
-        self.cmd = CmdType.NOP
-        self.valid_cmd = CmdType.NOP
-        self.cmd_prev = CmdType.NOP
-        self.running = False
-        self.phases = np.zeros(16, dtype=np.uint8)
-        self.loss = 80
-        self.peri_mode = 1
-        self.target = 0
-        self.scan_method = 0
-
-    def set_cmd(self, cmd):
-        self.cmd = cmd
-        if cmd != CmdType.NOP:
-            self.valid_cmd = cmd
-
-    @property
-    def packed_data(self):
-        data = np.zeros(128, dtype=np.uint8)
-        offset = 16
-
-        def to_packable(v, dtype=np.uint32):
-            return list(np.array(v, dtype=dtype).tobytes())
-
-        data.put(range(0, 4), to_packable(self.cmd))
-        match self.cmd:
-            case CmdType.RESET:
-                pass
-            case CmdType.SCAN:
-                data.put(range(4, 8), to_packable(self.scan_method))
-            case CmdType.STEER:
-                data.put(range(4, 8), to_packable(self.target))
-            case CmdType.SET_PHASE:
-                data.put(range(offset, offset + len(self.phases)), self.phases)
-            case CmdType.SET_LOSS:
-                data.put(offset, self.loss)
-            case _:
-                data[:] = 0
-        return data.tobytes()
 
 
 class UdpServer():
@@ -193,7 +182,7 @@ def process():
             data, _ = server.sock.recvfrom(1248)
             downstream.unpack_data(data)
         except TimeoutError:
-            downstream.status = Status.DISCONN
+            downstream.status = Status.DISCONNECTED
             print(f"{Fore.CYAN}Waiting for client packet{Fore.RESET}")
         return downstream.status
 
@@ -203,31 +192,30 @@ def process():
 
     while True:
         send_and_receive()
-        if ((downstream.status == Status.DISCONN) or
-            (upstream.cmd != CmdType.NOP and downstream.status != Status.BUSY)):
+        if ((downstream.status == Status.DISCONNECTED) or
+            (upstream.cmd != Command.NOP and downstream.status != Status.BUSY)):
             continue
 
         if downstream.status_prev == 0 and downstream.status == 1:
             pass
         elif downstream.status_prev == 1 and downstream.status == 0:
-            pass
             match upstream.cmd_prev:
-                case CmdType.SCAN:
+                case Command.SCAN:
                     logger.scan_done = True
 
-        if upstream.cmd != CmdType.NOP:
+        if upstream.cmd != Command.NOP:
             upstream.cmd_prev = upstream.cmd
-            upstream.cmd = CmdType.NOP
+            upstream.cmd = Command.NOP
         downstream.status_prev = downstream.status
         time.sleep(0.02)
 
         # print(f"cmd: {command.cmd} | valid cmd: {command.valid_cmd} | running: {command.running} | status: {stream.status}")
-        if upstream.valid_cmd != CmdType.NOP and downstream.status == Status.BUSY:
+        if upstream.valid_cmd != Command.NOP and downstream.status == Status.BUSY:
             upstream.running = True
         if upstream.running is True and downstream.status == Status.READY:
-            if upstream.valid_cmd == CmdType.STEER:
+            if upstream.valid_cmd == Command.STEER:
                 logging.info(logger.get_csv_string())
-            upstream.valid_cmd = CmdType.NOP
+            upstream.valid_cmd = Command.NOP
             upstream.running = False
             logger.done = True
 
