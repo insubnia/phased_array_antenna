@@ -154,7 +154,7 @@ class Widget(QWidget):
 
     def create_tx_group(self):
         groupbox = QGroupBox("Tx System")
-        groupbox.setFixedSize(430, 610)
+        groupbox.setFixedSize(430, 675)
         self.style_groupbox(groupbox)
 
         grid = QGridLayout()
@@ -266,14 +266,16 @@ class Widget(QWidget):
             dial.setWrapping(True)
             dial.setRange(0, 16)
             def dial_changed():
+                if downstream.status == Status.BUSY:
+                    return
+
                 if dial.value() == 16:
                     dial.setValue(0)
-                    return
                 label.setText(f"{dial.value():2}")
                 phases.put(idx, dial.value())
                 upstream.cmd = Command.SET_PHASE
-            # dial.valueChanged.connect(dial_changed)
-            # dial_changed()
+            dial.valueChanged.connect(dial_changed)
+            dial_changed()
 
             return _groupbox
 
