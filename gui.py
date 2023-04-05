@@ -289,7 +289,7 @@ class Widget(QWidget):
                 for m in range(esa.M):
                     val = phases[remap(esa.M * n + m)]
                     phase_dials[n][m].setValue(val)
-            Esa.set_phases(reshape_phases(phases))
+            esa.set_phases(reshape_phases(phases))
         timer = QTimer(self)
         timer.timeout.connect(phase_updater)
         timer.start(100)
