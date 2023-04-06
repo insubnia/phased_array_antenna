@@ -112,6 +112,9 @@ class Esa():
         self.ax = fig.add_subplot(projection='3d')
         self.ax.set_title("Beam Pattern", color='#778899', size=15, weight='bold', va='bottom')
         self.ax.view_init(elev=110, azim=-105, roll=-15)
+        self.ax.xaxis.set_ticklabels([])
+        self.ax.yaxis.set_ticklabels([])
+        self.ax.zaxis.set_ticklabels([])
 
         R = self.get_pattern_data_by_target_angle(0, 0)
         axis_length = np.max(R) * 1.3

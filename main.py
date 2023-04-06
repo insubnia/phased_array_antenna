@@ -196,9 +196,9 @@ def process():
             (upstream.cmd != Command.NOP and downstream.status != Status.BUSY)):
             continue
 
-        if downstream.status_prev == 0 and downstream.status == 1:
+        if downstream.status_prev == 0 and downstream.status != 0:
             pass
-        elif downstream.status_prev == 1 and downstream.status == 0:
+        elif downstream.status_prev != 0 and downstream.status == 0:
             match upstream.cmd_prev:
                 case Command.SCAN:
                     logger.scan_done = True

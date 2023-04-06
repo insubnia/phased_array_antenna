@@ -439,6 +439,7 @@ class Widget(QWidget):
             upstream.scan_method = 0
             upstream.cmd = Command.SCAN
         scan_button1.clicked.connect(steering_scan)
+        scan_button1.setShortcut('s')
 
         scan_button2 = QPushButton("Full-sweep Scan")
         hbox0.addWidget(scan_button2)
