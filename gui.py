@@ -51,7 +51,8 @@ def get_phase_display_string(arr1d=None, string=""):
         string += "\n" if n > 0 else ""
         for m in range(esa.M):
             string += " " if m > 0 else ""
-            code = arr1d[remap(esa.M * n + m)]
+            # code = arr1d[remap(esa.M * n + m)]
+            code = arr1d[esa.M * n + m]
             string += f"{code:2d}"
     return string
 
@@ -247,7 +248,8 @@ class Widget(QWidget):
         """
         phase_dials = np.ndarray((esa.N, esa.M), dtype='O')
         def create_single_phase_layout(n, m):
-            idx = remap(esa.M * n + m)
+            # idx = remap(esa.M * n + m)
+            idx = esa.M * n + m
             _groupbox = QGroupBox(f"Tx {idx}")
             _groupbox.setFlat(True)
             _groupbox.setFixedSize(100, 140)
@@ -287,7 +289,8 @@ class Widget(QWidget):
             dsa_slider.setValue(-loss)
             for n in range(esa.N):
                 for m in range(esa.M):
-                    val = phases[remap(esa.M * n + m)]
+                    # val = phases[remap(esa.M * n + m)]
+                    val = phases[esa.M * n + m]
                     phase_dials[n][m].setValue(val)
             esa.set_phases(reshape_phases(phases))
         timer = QTimer(self)
