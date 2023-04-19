@@ -17,12 +17,12 @@ loss = 127
 esa = Esa()
 
 
-def resource_path(relative_path):
-    try:
-        base_path = sys._MEIPASS
-    except Exception:
-        base_path = os.path.abspath(".")
-    return os.path.join(base_path, relative_path)
+def resource_path(relpath):
+    if hasattr(sys, '_MEIPASS'):
+        cwd = getattr(sys, '_MEIPASS')
+    else:
+        cwd = os.getcwd()
+    return os.path.abspath(os.path.join(cwd, relpath))
 
 
 def remap(x):
@@ -40,7 +40,7 @@ def reshape_phases(_phases):
     for n in range(esa.N):
         for m in range(esa.M):
             val = _phases[remap(esa.M * n + m)]
-            sim_phases[n][m] =  0 if val == -1 else val * 22.5
+            sim_phases[n][m] = 0 if val == -1 else val * 22.5
     return sim_phases
 
 
@@ -411,7 +411,7 @@ class Widget(QWidget):
                 w['bat_pbar'].setValue(bat_pct)
                 w['bat_label'].setText(f"{peri.bat_adc}")
                 w['profile_label'].setText(get_phase_display_string(peri.phases))
-                w['vector']['r'].setText(f"N/A")  # TODO: replace with RSSI
+                w['vector']['r'].setText("N/A")  # TODO: replace with RSSI
                 w['vector']['theta'].setText(f"{peri.theta_d:.0f}")
                 w['vector']['phi'].setText(f"{peri.phi_d:.0f}")
 
