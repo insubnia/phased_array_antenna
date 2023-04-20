@@ -81,6 +81,7 @@ class Downstream():
         self.cmd_rcvd = Command.NOP
         self.confirm = False
         self.curr_phases = np.zeros(16, dtype=np.int8)
+        self.pa_powers = np.zeros(16, dtype=np.uint16)
 
         class PeriInfo(object):
             def __init__(self):
@@ -97,6 +98,7 @@ class Downstream():
         self.cmd_rcvd = data[2]
         self.confirm = data[3]
         self.curr_phases = np.frombuffer(data[4:20], dtype=np.int8)
+        self.pa_powers = np.frombuffer(data[20:52], dtype=np.uint16)
         o = 128
         for peri_info in self.peri_infos:
             peri_info.address = np.frombuffer(data[o: o + 6], dtype=np.uint8)
@@ -197,8 +199,10 @@ def process():
             continue
 
         if downstream.status_prev == 0 and downstream.status != 0:
+            # print(f"{upstream.cmd} - Rising Edge")
             pass
         elif downstream.status_prev != 0 and downstream.status == 0:
+            # print(f"{upstream.cmd_prev} - Falling Edge\n")
             match upstream.cmd_prev:
                 case Command.SCAN:
                     logger.scan_done = True
