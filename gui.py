@@ -347,10 +347,14 @@ class Widget(QWidget):
 
         rx_widgets = []
         def create_rx_column(idx):
-            """ Header
+            _widgets = dict()
+            rx_widgets.append(_widgets)
+
+            """ Tag
             """
             label = QLabel(f"Rx #{idx}")
             grid.addWidget(label, 0, idx)
+            _widgets['tag'] = label
             label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             label.setStyleSheet("font-weight: bold")
             label.setFixedHeight(20)
@@ -359,9 +363,6 @@ class Widget(QWidget):
             """
             rfdc_vbox = QVBoxLayout()
             grid.addLayout(rfdc_vbox, 1, idx)
-
-            _widgets = dict()
-            rx_widgets.append(_widgets)
 
             rfdc_img = QLabel("")
             rfdc_vbox.addWidget(rfdc_img)
@@ -428,20 +429,25 @@ class Widget(QWidget):
 
         def rx_updater():
             bat_adc_min, bat_adc_max = 2150, 3600
-            for i, peri in enumerate(backend.rx_infos):
+            for i, rx in enumerate(backend.rx_infos):
                 w = rx_widgets[i]
-                level = get_level(peri.rfdc_adc)
-                bat_adc = min(bat_adc_max, max(bat_adc_min, peri.bat_adc))
+                level = get_level(rx.rfdc_adc)
+                bat_adc = min(bat_adc_max, max(bat_adc_min, rx.bat_adc))
                 bat_pct = int((bat_adc - bat_adc_min) / (bat_adc_max - bat_adc_min) * 100)
 
+                if (backend.upstrm.phases == rx.phases).all():
+                    w['tag'].setStyleSheet("background-color: yellow")
+                else:
+                    w['tag'].setStyleSheet("background-color: ghostwhite")
+
                 w['rfdc_img'].setPixmap(pixmaps[level])
-                w['rfdc_label'].setText(f"{peri.rfdc_adc}")
+                w['rfdc_label'].setText(f"{rx.rfdc_adc}")
                 w['bat_pbar'].setValue(bat_pct)
-                w['bat_label'].setText(f"{peri.bat_adc}")
-                w['profile_label'].setText(get_phase_display_string(peri.phases))
+                w['bat_label'].setText(f"{rx.bat_adc}")
+                w['profile_label'].setText(get_phase_display_string(rx.phases))
                 w['vector']['r'].setText("N/A")  # TODO: replace with RSSI
-                w['vector']['theta'].setText(f"{peri.theta_d:.0f}")
-                w['vector']['phi'].setText(f"{peri.phi_d:.0f}")
+                w['vector']['theta'].setText(f"{rx.theta_d:.0f}")
+                w['vector']['phi'].setText(f"{rx.phi_d:.0f}")
 
         timer = QTimer(self)
         timer.timeout.connect(rx_updater)
