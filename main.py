@@ -154,7 +154,8 @@ class Logger():
 class Backend(Logger):
     def __init__(self):
         super().__init__()
-        self.signal = Command.NOP
+        self.start_signal = Command.NOP
+        self.finish_signal = Command.NOP
         self.upstrm = Upstream()
         self.dnstrm = Downstream()
         self.init_socket()
@@ -199,10 +200,10 @@ class Backend(Logger):
 
             if self.dnstrm.status_prev == 0 and self.dnstrm.status != 0:
                 # print(f"\n{self.upstrm.cmd} - Rising Edge")
-                pass
+                self.start_signal = self.upstrm.cmd
             elif self.dnstrm.status_prev != 0 and self.dnstrm.status == 0:
                 print(f"{self.upstrm.cmd_prev} - Falling Edge")
-                self.signal = self.upstrm.cmd_prev
+                self.finish_signal = self.upstrm.cmd_prev
                 match self.upstrm.cmd_prev:
                     case Command.SCAN | Command.STEER:
                         logging.info(self.get_csv_string())

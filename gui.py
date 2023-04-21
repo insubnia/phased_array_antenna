@@ -79,6 +79,10 @@ class Window(QMainWindow):
                            background-color: aliceblue;
                            """)
         self.init_ui()
+        
+    @property
+    def te(self):
+        return self.widget.te
 
     def init_ui(self):
         self.setWindowTitle("WPT Visualizer")
@@ -115,16 +119,32 @@ class Window(QMainWindow):
             self.widget.cmd_group.setEnabled(False)
         self.statusbar.showMessage(Status(backend.dnstrm.status).name.lower())
 
-        if backend.signal != Command.NOP:
-            match backend.signal:
-                case Command.SCAN:
-                    update_receivers()
-                case _:
-                    pass
-            backend.signal = Command.NOP
+        # Start Signal
+        match backend.start_signal:
+            case Command.SCAN:
+                self.print("Scanning... ")
+        if backend.start_signal != Command.NOP:
+            backend.start_signal = Command.NOP
+
+        # Finish Signal
+        match backend.finish_signal:
+            case Command.RESET:
+                self.print("Reset whole phases\n")
+            case Command.SCAN:
+                update_receivers()
+                self.print("Done\n")
+            case Command.STEER:
+                self.print(f"Steering to Rx#{backend.upstrm.target + 1}\n")
+        if backend.finish_signal != Command.NOP:
+            backend.finish_signal = Command.NOP
+            self.scroll_to_bottom()
 
     def print(self, *args, **kwargs):
-        self.widget.te.append(*args, **kwargs)
+        # self.widget.te.append(*args, **kwargs)
+        self.te.insertPlainText(*args, **kwargs)
+    
+    def scroll_to_bottom(self):
+        self.te.verticalScrollBar().setValue(self.te.verticalScrollBar().maximum())
 
 
 class Widget(QWidget):
@@ -494,6 +514,7 @@ class Widget(QWidget):
         groupbox.setLayout(hbox0)
         self.te = QTextEdit(readOnly=True)
         hbox0.addWidget(self.te)
+        self.te.setFontPointSize(12)
         return groupbox
 
 
