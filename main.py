@@ -145,9 +145,9 @@ class Logger():
         return s
 
     def get_log_string(self):
-        s = f"MCP: {self.ccp}uA/MHz  |  " +\
-            f"Scanning Rate: {self.scanning_rate:5.2f}ms  |  " +\
-            f"TOPS/W: {self.tops_p_watt:.3f}"
+        s = f"MCP: {self.ccp}uA/MHz  |  "
+        s += f"Scanning Rate: {self.scanning_rate:5.2f}ms  |  "
+        s += f"TOPS/W: {self.tops_p_watt:.3f}"
         return s
 
 
@@ -182,7 +182,7 @@ class Backend(Logger):
         return len(self.dnstrm.peri_infos)
 
     def exchange_pkt(self):
-        self.sock.sendto(upstream.packed_data, self.client_addr)
+        self.sock.sendto(self.upstrm.packed_data, self.client_addr)
         try:
             data, _ = self.sock.recvfrom(1248)
             self.dnstrm.unpack_data(data)
@@ -194,29 +194,27 @@ class Backend(Logger):
         while True:
             self.exchange_pkt()
             if ((self.dnstrm.status == Status.DISCONNECTED) or
-                (upstream.cmd != Command.NOP and self.dnstrm.status != Status.BUSY)):
+                (self.upstrm.cmd != Command.NOP and self.dnstrm.status != Status.BUSY)):
                 continue
 
             if self.dnstrm.status_prev == 0 and self.dnstrm.status != 0:
-                # print(f"\n{upstream.cmd} - Rising Edge")
+                # print(f"\n{self.upstrm.cmd} - Rising Edge")
                 pass
             elif self.dnstrm.status_prev != 0 and self.dnstrm.status == 0:
-                # print(f"{upstream.cmd_prev} - Falling Edge")
-                self.signal = upstream.cmd_prev
-                match upstream.cmd_prev:
+                print(f"{self.upstrm.cmd_prev} - Falling Edge")
+                self.signal = self.upstrm.cmd_prev
+                match self.upstrm.cmd_prev:
                     case Command.SCAN | Command.STEER:
                         logging.info(self.get_csv_string())
 
-            if upstream.cmd != Command.NOP:
-                upstream.cmd_prev = upstream.cmd
-                upstream.cmd = Command.NOP
+            if self.upstrm.cmd != Command.NOP:
+                self.upstrm.cmd_prev = self.upstrm.cmd
+                self.upstrm.cmd = Command.NOP
             self.dnstrm.status_prev = self.dnstrm.status
             time.sleep(0.02)
 
 
 backend = Backend()
-
-upstream = Upstream()
 
 if __name__ == "__main__":
     backend.process()

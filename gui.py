@@ -9,7 +9,7 @@ from PyQt6.QtGui import *
 from PyQt6.QtCore import *
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 
-from main import Status, Command, backend, upstream
+from main import Status, Command, backend
 from sim import Esa, receivers
 
 phases = np.zeros(16, dtype=np.int8)
@@ -100,7 +100,7 @@ class Window(QMainWindow):
 
     def updater(self):
         if backend.dnstrm.status == Status.READY:
-            upstream.phases = phases.copy()
+            backend.upstrm.phases = phases.copy()
             self.widget.tx_group.setEnabled(True)
             self.widget.rx_group.setEnabled(True)
             self.widget.cmd_group.setEnabled(True)
@@ -193,8 +193,8 @@ class Widget(QWidget):
             val = dsa_slider.value()
             esa.set_amplitude(4 + 6 * (127 + val) / 127)
             dsa_label.setText(f"{val * 0.25:.2f} dB")
-            upstream.loss = loss = -val
-            upstream.cmd = Command.SET_LOSS
+            backend.upstrm.loss = loss = -val
+            backend.upstrm.cmd = Command.SET_LOSS
         dsa_slider.valueChanged.connect(dsa_changed)
         dsa_slider.setValue(-loss)
         QShortcut(QKeySequence('['), self, lambda: dsa_slider.setValue(dsa_slider.value() + 1))
@@ -250,7 +250,7 @@ class Widget(QWidget):
         mode_combobox.addItems(["Charging", "Scanning"])
         mode_combobox.setCurrentIndex(1)
         def combobox_changed():
-            upstream.peri_mode = mode_combobox.currentIndex()
+            backend.upstrm.peri_mode = mode_combobox.currentIndex()
         mode_combobox.currentIndexChanged.connect(combobox_changed)
         vbox3.addWidget(QLabel())  # dummy for layout
 
@@ -285,7 +285,7 @@ class Widget(QWidget):
                     dial.setValue(0)
                 label.setText(f"{dial.value():2}")
                 phases.put(idx, dial.value())
-                upstream.cmd = Command.SET_PHASE
+                backend.upstrm.cmd = Command.SET_PHASE
             dial.valueChanged.connect(dial_changed)
             dial_changed()
 
@@ -449,8 +449,8 @@ class Widget(QWidget):
         scan_button1.setStyleSheet(btn_ss)
         scan_button1.setFixedHeight(50)
         def steering_scan():
-            upstream.scan_method = 0
-            upstream.cmd = Command.SCAN
+            backend.upstrm.scan_method = 0
+            backend.upstrm.cmd = Command.SCAN
         scan_button1.clicked.connect(steering_scan)
         scan_button1.setShortcut('s')
 
@@ -459,23 +459,23 @@ class Widget(QWidget):
         scan_button2.setStyleSheet(btn_ss)
         scan_button2.setFixedHeight(50)
         def fullsweep_scan():
-            upstream.scan_method = 1
-            upstream.cmd = Command.SCAN
+            backend.upstrm.scan_method = 1
+            backend.upstrm.cmd = Command.SCAN
         scan_button2.clicked.connect(fullsweep_scan)
 
         clear_button = QPushButton("Reset")
         hbox0.addWidget(clear_button)
         clear_button.setStyleSheet(btn_ss)
         clear_button.setFixedHeight(50)
-        clear_button.clicked.connect(lambda: (upstream.set_cmd(Command.RESET), phases.fill(0)))
+        clear_button.clicked.connect(lambda: (backend.upstrm.set_cmd(Command.RESET), phases.fill(0)))
         clear_button.setShortcut('0')
 
         hbox1 = QHBoxLayout()
         vbox.addLayout(hbox1)
 
         def target_button_clicked(i):
-            upstream.target = i
-            upstream.set_cmd(Command.STEER)
+            backend.upstrm.target = i
+            backend.upstrm.set_cmd(Command.STEER)
 
         for i in range(backend.max_rx_num):
             button = QPushButton(f"Rx #{i + 1}")
