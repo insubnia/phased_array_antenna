@@ -476,9 +476,6 @@ class Widget(QWidget):
         def target_button_clicked(i):
             upstream.target = i
             upstream.set_cmd(Command.STEER)
-            phases.put(range(0, 16), backend.rx_infos[i].phases)
-            phases[phases < 0] = 0
-            #np.place(phases, phases < 0, 0)
 
         for i in range(backend.max_rx_num):
             button = QPushButton(f"Rx #{i + 1}")

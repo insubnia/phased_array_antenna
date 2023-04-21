@@ -18,7 +18,6 @@ class Status(IntEnum):
     BUSY = 1
     DISCONNECTED = 255
 
-
 class Command(IntEnum):
     NOP = 0
     RESET = auto()
@@ -110,7 +109,6 @@ class Logger():
         self.ccp = 0
         self.scanning_rate = 0
         self.tops_p_watt = 0
-        self.scan_done = False
 
         log_dir = './log'
         os.makedirs(log_dir, exist_ok=True)
@@ -122,13 +120,13 @@ class Logger():
                             level=logging.NOTSET)
         logging.StreamHandler.terminator = ""
 
-        header_row = "rx#, R, θ, ϕ"
+        s = "rx#, R, θ, ϕ"
         for i in range(16):
-            header_row += f", ps#{i}"
+            s += f", ps#{i}"
         for i in range(16):
-            header_row += f", range#{i}"
-        header_row += ", CCP(uW), Scanning Rate(ms), TOPS/W"
-        logging.info(f"{header_row}\n")
+            s += f", range#{i}"
+        s += ", CCP(uW), Scanning Rate(ms), TOPS/W"
+        logging.info(f"{s}\n")
 
     def get_csv_string(self):
         s = ""
@@ -147,14 +145,15 @@ class Logger():
         return s
 
     def get_log_string(self):
-        s = f"MCP: {logger.ccp}uA/MHz  |  " +\
-            f"Scanning Rate: {logger.scanning_rate:5.2f}ms  |  " +\
-            f"TOPS/W: {logger.tops_p_watt:.3f}"
+        s = f"MCP: {self.ccp}uA/MHz  |  " +\
+            f"Scanning Rate: {self.scanning_rate:5.2f}ms  |  " +\
+            f"TOPS/W: {self.tops_p_watt:.3f}"
         return s
 
 
-class Backend():
+class Backend(Logger):
     def __init__(self):
+        super().__init__()
         self.signal = Command.NOP
         self.upstrm = Upstream()
         self.dnstrm = Downstream()
@@ -199,16 +198,14 @@ class Backend():
                 continue
 
             if self.dnstrm.status_prev == 0 and self.dnstrm.status != 0:
-                # print(f"{upstream.cmd} - Rising Edge")
+                # print(f"\n{upstream.cmd} - Rising Edge")
                 pass
             elif self.dnstrm.status_prev != 0 and self.dnstrm.status == 0:
-                # print(f"{upstream.cmd_prev} - Falling Edge\n")
+                # print(f"{upstream.cmd_prev} - Falling Edge")
                 self.signal = upstream.cmd_prev
                 match upstream.cmd_prev:
-                    case Command.SCAN:
-                        logger.scan_done = True
-                    case Command.STEER:
-                        logging.info(logger.get_csv_string())
+                    case Command.SCAN | Command.STEER:
+                        logging.info(self.get_csv_string())
 
             if upstream.cmd != Command.NOP:
                 upstream.cmd_prev = upstream.cmd
@@ -220,7 +217,6 @@ class Backend():
 backend = Backend()
 
 upstream = Upstream()
-logger = Logger()
 
 if __name__ == "__main__":
     backend.process()
