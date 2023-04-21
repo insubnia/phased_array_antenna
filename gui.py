@@ -9,7 +9,7 @@ from PyQt6.QtGui import *
 from PyQt6.QtCore import *
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 
-from main import process, upstream, Status, Command, backend
+from main import Status, Command, backend, upstream
 from sim import Esa, receivers
 
 phases = np.zeros(16, dtype=np.int8)
@@ -89,7 +89,7 @@ class Window(QMainWindow):
 
         self.statusbar = self.statusBar()
 
-        streamer = threading.Thread(target=process)
+        streamer = threading.Thread(target=backend.process)
         streamer.daemon = True
         streamer.start()
 
@@ -395,7 +395,7 @@ class Widget(QWidget):
                 le.setReadOnly(True)
                 pos_grid.addWidget(le, i, 1)
 
-        for i in range(backend.MAX_RX_NUM):
+        for i in range(backend.max_rx_num):
             create_rx_column(i + 1)
 
         section_num = 6
@@ -480,7 +480,7 @@ class Widget(QWidget):
             phases[phases < 0] = 0
             #np.place(phases, phases < 0, 0)
 
-        for i in range(backend.MAX_RX_NUM):
+        for i in range(backend.max_rx_num):
             button = QPushButton(f"Rx #{i + 1}")
             hbox1.addWidget(button)
             button.setStyleSheet(btn_ss)

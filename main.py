@@ -10,10 +10,6 @@ from datetime import datetime
 from enum import IntEnum, auto
 from colorama import Fore
 
-LOG_DIR = './log'
-if not os.path.exists(LOG_DIR):
-    os.makedirs(LOG_DIR)
-
 MAX_RX_NUM = 5
 
 
@@ -108,22 +104,6 @@ class Downstream():
             o += 128
 
 
-class UdpServer():
-    def __init__(self):
-        self.server_addr = ('192.168.0.10', 1248)
-        self.client_addr = ('192.168.0.20', 1248)
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        try:
-            self.sock.bind(self.server_addr)
-        except OSError:
-            print(f"{Fore.RED}\n[Error] Check IP address\n{Fore.RESET}")
-            sys.exit()
-        self.sock.settimeout(1)
-
-    def __del__(self):
-        self.sock.close()
-
-
 class Logger():
     def __init__(self):
         self.done = False
@@ -132,8 +112,9 @@ class Logger():
         self.tops_p_watt = 0
         self.scan_done = False
 
-        now = datetime.now()
-        logging.basicConfig(filename=f"{LOG_DIR}/{now.strftime('%Y%m%d_%H%M%S')}.csv",
+        log_dir = './log'
+        os.makedirs(log_dir, exist_ok=True)
+        logging.basicConfig(filename=f"{log_dir}/{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
                             filemode='w',
                             # format='%(asctime)s, %(message)s',
                             format='%(message)s',
@@ -173,65 +154,73 @@ class Logger():
 
 
 class Backend():
-    MAX_RX_NUM = 5
     def __init__(self):
         self.signal = Command.NOP
         self.upstrm = Upstream()
         self.dnstrm = Downstream()
+        self.init_socket()
+
+    def __del__(self):
+        self.sock.close()
+
+    def init_socket(self):
+        self.server_addr = ('192.168.0.10', 1248)
+        self.client_addr = ('192.168.0.20', 1248)
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        try:
+            self.sock.bind(self.server_addr)
+        except OSError:
+            print(f"{Fore.RED}\n[Error] Check IP address\n{Fore.RESET}")
+            sys.exit()
+        self.sock.settimeout(1)
 
     @property
     def rx_infos(self):
         return self.dnstrm.peri_infos
+    
+    @property
+    def max_rx_num(self):
+        return len(self.dnstrm.peri_infos)
+
+    def exchange_pkt(self):
+        self.sock.sendto(upstream.packed_data, self.client_addr)
+        try:
+            data, _ = self.sock.recvfrom(1248)
+            self.dnstrm.unpack_data(data)
+        except TimeoutError:
+            self.dnstrm.status = Status.DISCONNECTED
+            print(f"{Fore.CYAN}Waiting for client packet{Fore.RESET}")
 
     def process(self):
-        pass
+        while True:
+            self.exchange_pkt()
+            if ((self.dnstrm.status == Status.DISCONNECTED) or
+                (upstream.cmd != Command.NOP and self.dnstrm.status != Status.BUSY)):
+                continue
+
+            if self.dnstrm.status_prev == 0 and self.dnstrm.status != 0:
+                # print(f"{upstream.cmd} - Rising Edge")
+                pass
+            elif self.dnstrm.status_prev != 0 and self.dnstrm.status == 0:
+                # print(f"{upstream.cmd_prev} - Falling Edge\n")
+                self.signal = upstream.cmd_prev
+                match upstream.cmd_prev:
+                    case Command.SCAN:
+                        logger.scan_done = True
+                    case Command.STEER:
+                        logging.info(logger.get_csv_string())
+
+            if upstream.cmd != Command.NOP:
+                upstream.cmd_prev = upstream.cmd
+                upstream.cmd = Command.NOP
+            self.dnstrm.status_prev = self.dnstrm.status
+            time.sleep(0.02)
 
 
 backend = Backend()
 
 upstream = Upstream()
-server = UdpServer()
 logger = Logger()
 
-
-def process():
-    def update_downstream():
-        try:
-            data, _ = server.sock.recvfrom(1248)
-            backend.dnstrm.unpack_data(data)
-        except TimeoutError:
-            backend.dnstrm.status = Status.DISCONNECTED
-            print(f"{Fore.CYAN}Waiting for client packet{Fore.RESET}")
-        return backend.dnstrm.status
-
-    def send_and_receive():
-        server.sock.sendto(upstream.packed_data, server.client_addr)
-        update_downstream()
-
-    while True:
-        send_and_receive()
-        if ((backend.dnstrm.status == Status.DISCONNECTED) or
-            (upstream.cmd != Command.NOP and backend.dnstrm.status != Status.BUSY)):
-            continue
-
-        if backend.dnstrm.status_prev == 0 and backend.dnstrm.status != 0:
-            # print(f"{upstream.cmd} - Rising Edge")
-            pass
-        elif backend.dnstrm.status_prev != 0 and backend.dnstrm.status == 0:
-            # print(f"{upstream.cmd_prev} - Falling Edge\n")
-            backend.signal = upstream.cmd_prev
-            match upstream.cmd_prev:
-                case Command.SCAN:
-                    logger.scan_done = True
-                case Command.STEER:
-                    logging.info(logger.get_csv_string())
-
-        if upstream.cmd != Command.NOP:
-            upstream.cmd_prev = upstream.cmd
-            upstream.cmd = Command.NOP
-        backend.dnstrm.status_prev = backend.dnstrm.status
-        time.sleep(0.02)
-
-
 if __name__ == "__main__":
-    process()
+    backend.process()
