@@ -151,7 +151,7 @@ class Logger():
 
     def get_csv_string(self):
         s = ""
-        for i, peri in enumerate(downstream.peri_infos):
+        for i, peri in enumerate(backend.rx_infos):
             if peri.address[0] == 0:
                 continue
             s += f"{i + 1}, {peri.r}, {peri.theta_d}, {peri.phi_d}"
@@ -172,8 +172,24 @@ class Logger():
         return s
 
 
+class Backend():
+    MAX_RX_NUM = 5
+    def __init__(self):
+        self.signal = Command.NOP
+        self.upstrm = Upstream()
+        self.dnstrm = Downstream()
+
+    @property
+    def rx_infos(self):
+        return self.dnstrm.peri_infos
+
+    def process(self):
+        pass
+
+
+backend = Backend()
+
 upstream = Upstream()
-downstream = Downstream()
 server = UdpServer()
 logger = Logger()
 
@@ -182,11 +198,11 @@ def process():
     def update_downstream():
         try:
             data, _ = server.sock.recvfrom(1248)
-            downstream.unpack_data(data)
+            backend.dnstrm.unpack_data(data)
         except TimeoutError:
-            downstream.status = Status.DISCONNECTED
+            backend.dnstrm.status = Status.DISCONNECTED
             print(f"{Fore.CYAN}Waiting for client packet{Fore.RESET}")
-        return downstream.status
+        return backend.dnstrm.status
 
     def send_and_receive():
         server.sock.sendto(upstream.packed_data, server.client_addr)
@@ -194,34 +210,27 @@ def process():
 
     while True:
         send_and_receive()
-        if ((downstream.status == Status.DISCONNECTED) or
-            (upstream.cmd != Command.NOP and downstream.status != Status.BUSY)):
+        if ((backend.dnstrm.status == Status.DISCONNECTED) or
+            (upstream.cmd != Command.NOP and backend.dnstrm.status != Status.BUSY)):
             continue
 
-        if downstream.status_prev == 0 and downstream.status != 0:
+        if backend.dnstrm.status_prev == 0 and backend.dnstrm.status != 0:
             # print(f"{upstream.cmd} - Rising Edge")
             pass
-        elif downstream.status_prev != 0 and downstream.status == 0:
+        elif backend.dnstrm.status_prev != 0 and backend.dnstrm.status == 0:
             # print(f"{upstream.cmd_prev} - Falling Edge\n")
+            backend.signal = upstream.cmd_prev
             match upstream.cmd_prev:
                 case Command.SCAN:
                     logger.scan_done = True
+                case Command.STEER:
+                    logging.info(logger.get_csv_string())
 
         if upstream.cmd != Command.NOP:
             upstream.cmd_prev = upstream.cmd
             upstream.cmd = Command.NOP
-        downstream.status_prev = downstream.status
+        backend.dnstrm.status_prev = backend.dnstrm.status
         time.sleep(0.02)
-
-        # print(f"cmd: {command.cmd} | valid cmd: {command.valid_cmd} | running: {command.running} | status: {stream.status}")
-        if upstream.valid_cmd != Command.NOP and downstream.status == Status.BUSY:
-            upstream.running = True
-        if upstream.running is True and downstream.status == Status.READY:
-            if upstream.valid_cmd == Command.STEER:
-                logging.info(logger.get_csv_string())
-            upstream.valid_cmd = Command.NOP
-            upstream.running = False
-            logger.done = True
 
 
 if __name__ == "__main__":

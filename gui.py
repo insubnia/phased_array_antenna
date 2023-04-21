@@ -9,7 +9,7 @@ from PyQt6.QtGui import *
 from PyQt6.QtCore import *
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 
-from main import process, upstream, downstream, Status, Command, logger, MAX_RX_NUM
+from main import process, upstream, Status, Command, backend
 from sim import Esa, receivers
 
 phases = np.zeros(16, dtype=np.int8)
@@ -57,6 +57,20 @@ def get_phase_display_string(arr1d=None, string=""):
     return string
 
 
+def update_receivers():
+    for i, receiver in enumerate(receivers):
+        peri_info = backend.rx_infos[i]
+        if peri_info.address[0] == 0:
+            receiver.r = 0
+            peri_info.theta_d = 0
+            peri_info.phi_d = 0
+            continue
+        vector = Esa.get_vector(reshape_phases(peri_info.phases))
+        receiver.set_spherical_coord(125, vector.theta, vector.phi)
+        peri_info.theta_d = vector.theta
+        peri_info.phi_d = vector.phi
+
+
 class Window(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -85,13 +99,13 @@ class Window(QMainWindow):
         self.show()
 
     def updater(self):
-        if downstream.status == Status.READY:
+        if backend.dnstrm.status == Status.READY:
             upstream.phases = phases.copy()
             self.widget.tx_group.setEnabled(True)
             self.widget.rx_group.setEnabled(True)
             self.widget.cmd_group.setEnabled(True)
-        elif downstream.status == Status.BUSY:
-            phases.put(range(0, 16), downstream.curr_phases)
+        elif backend.dnstrm.status == Status.BUSY:
+            phases.put(range(0, 16), backend.dnstrm.curr_phases)
             self.widget.tx_group.setEnabled(False)
             self.widget.rx_group.setEnabled(True)
             self.widget.cmd_group.setEnabled(False)
@@ -99,22 +113,18 @@ class Window(QMainWindow):
             self.widget.tx_group.setEnabled(False)
             self.widget.rx_group.setEnabled(False)
             self.widget.cmd_group.setEnabled(False)
-        self.statusbar.showMessage(Status(downstream.status).name.lower())
+        self.statusbar.showMessage(Status(backend.dnstrm.status).name.lower())
 
-        if logger.scan_done:
-            logger.scan_done = False
-            # self.widget.te.append(logger.get_log_string())
-            for i, receiver in enumerate(receivers):
-                peri_info = downstream.peri_infos[i]
-                if peri_info.address[0] == 0:
-                    receiver.r = 0
-                    peri_info.theta_d = 0
-                    peri_info.phi_d = 0
-                    continue
-                vector = Esa.get_vector(reshape_phases(peri_info.phases))
-                receiver.set_spherical_coord(125, vector.theta, vector.phi)
-                peri_info.theta_d = vector.theta
-                peri_info.phi_d = vector.phi
+        if backend.signal != Command.NOP:
+            match backend.signal:
+                case Command.SCAN:
+                    update_receivers()
+                case _:
+                    pass
+            backend.signal = Command.NOP
+
+    def print(self, *args, **kwargs):
+        self.widget.te.append(*args, **kwargs)
 
 
 class Widget(QWidget):
@@ -268,7 +278,7 @@ class Widget(QWidget):
             dial.setWrapping(True)
             dial.setRange(0, 16)
             def dial_changed():
-                if downstream.status == Status.BUSY:
+                if backend.dnstrm.status == Status.BUSY:
                     return
 
                 if dial.value() == 16:
@@ -385,7 +395,7 @@ class Widget(QWidget):
                 le.setReadOnly(True)
                 pos_grid.addWidget(le, i, 1)
 
-        for i in range(MAX_RX_NUM):
+        for i in range(backend.MAX_RX_NUM):
             create_rx_column(i + 1)
 
         section_num = 6
@@ -400,7 +410,7 @@ class Widget(QWidget):
 
         def rx_updater():
             bat_adc_min, bat_adc_max = 3000, 4095
-            for i, peri in enumerate(downstream.peri_infos):
+            for i, peri in enumerate(backend.rx_infos):
                 w = rx_widgets[i]
                 level = get_level(peri.rfdc_adc)
                 bat_adc = min(bat_adc_max, max(bat_adc_min, peri.bat_adc))
@@ -466,11 +476,11 @@ class Widget(QWidget):
         def target_button_clicked(i):
             upstream.target = i
             upstream.set_cmd(Command.STEER)
-            phases.put(range(0, 16), downstream.peri_infos[i].phases)
+            phases.put(range(0, 16), backend.rx_infos[i].phases)
             phases[phases < 0] = 0
             #np.place(phases, phases < 0, 0)
 
-        for i in range(MAX_RX_NUM):
+        for i in range(backend.MAX_RX_NUM):
             button = QPushButton(f"Rx #{i + 1}")
             hbox1.addWidget(button)
             button.setStyleSheet(btn_ss)
