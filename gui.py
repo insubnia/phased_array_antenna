@@ -79,7 +79,7 @@ class Window(QMainWindow):
                            background-color: aliceblue;
                            """)
         self.init_ui()
-        
+
     @property
     def te(self):
         return self.widget.te
@@ -142,7 +142,7 @@ class Window(QMainWindow):
     def print(self, *args, **kwargs):
         # self.widget.te.append(*args, **kwargs)
         self.te.insertPlainText(*args, **kwargs)
-    
+
     def scroll_to_bottom(self):
         self.te.verticalScrollBar().setValue(self.te.verticalScrollBar().maximum())
 

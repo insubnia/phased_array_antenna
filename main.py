@@ -18,6 +18,7 @@ class Status(IntEnum):
     BUSY = 1
     DISCONNECTED = 255
 
+
 class Command(IntEnum):
     NOP = 0
     RESET = auto()
@@ -177,7 +178,7 @@ class Backend(Logger):
     @property
     def rx_infos(self):
         return self.dnstrm.peri_infos
-    
+
     @property
     def max_rx_num(self):
         return len(self.dnstrm.peri_infos)
