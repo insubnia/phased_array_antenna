@@ -398,18 +398,16 @@ class Widget(QWidget):
         for i in range(backend.max_rx_num):
             create_rx_column(i + 1)
 
-        section_num = 6
-        pixmaps = [QPixmap(resource_path(f'deco/signal_{i}')) for i in range(section_num)]
+        levels = (150, 300, 400, 700, 1000)
+        pixmaps = [QPixmap(resource_path(f'deco/signal_{i}')) for i in range(len(levels) + 1)]
         def get_level(val):
-            b = [0, 150, 500, 1200, 2000, 3000, 4096]  # len(b) must be section_num + 1
-            for i in range(section_num):
-                # print(f"[{i}/{section_num}] is {val} in range of {b[i]} ~ {b[i+1]}?")
-                if b[i] <= val < b[i + 1]:
+            for i, upper in enumerate(levels):
+                if val < upper:
                     return i
-            return section_num - 1
+            return len(levels)
 
         def rx_updater():
-            bat_adc_min, bat_adc_max = 3000, 4095
+            bat_adc_min, bat_adc_max = 2150, 3600
             for i, peri in enumerate(backend.rx_infos):
                 w = rx_widgets[i]
                 level = get_level(peri.rfdc_adc)
