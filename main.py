@@ -32,7 +32,7 @@ class Upstream():
     def __init__(self):
         self.cmd = Command.NOP
         self.valid_cmd = Command.NOP
-        self.cmd_prev = Command.NOP
+        self.cmd_sent = Command.NOP
         self.running = False
         self.phases = np.zeros(16, dtype=np.uint8)
         self.loss = 80
@@ -171,9 +171,11 @@ class Backend(Logger):
         try:
             self.sock.bind(self.server_addr)
         except OSError:
-            print(f"{Fore.RED}\n[Error] Check IP address\n{Fore.RESET}")
-            sys.exit()
-        self.sock.settimeout(1)
+            s = "\n[Error] Check IP address\n"
+            s += "IP address must be 192.168.0.10\n"
+            print(f"{Fore.RED}{s}{Fore.RESET}")
+            # sys.exit()
+        self.sock.settimeout(2)
 
     @property
     def rx_infos(self):
@@ -191,6 +193,8 @@ class Backend(Logger):
         except TimeoutError:
             self.dnstrm.status = Status.DISCONNECTED
             print(f"{Fore.CYAN}Waiting for client packet{Fore.RESET}")
+        finally:
+            time.sleep(0.02)
 
     def process(self):
         while True:
@@ -203,17 +207,16 @@ class Backend(Logger):
                 # print(f"\n{self.upstrm.cmd} - Rising Edge")
                 self.start_signal = self.upstrm.cmd
             elif self.dnstrm.status_prev != 0 and self.dnstrm.status == 0:
-                print(f"{self.upstrm.cmd_prev} - Falling Edge")
-                self.finish_signal = self.upstrm.cmd_prev
-                match self.upstrm.cmd_prev:
+                print(f"{self.upstrm.cmd_sent} - Falling Edge")
+                self.finish_signal = self.upstrm.cmd_sent
+                match self.upstrm.cmd_sent:
                     case Command.SCAN | Command.STEER:
                         logging.info(self.get_csv_string())
 
             if self.upstrm.cmd != Command.NOP:
-                self.upstrm.cmd_prev = self.upstrm.cmd
+                self.upstrm.cmd_sent = self.upstrm.cmd
                 self.upstrm.cmd = Command.NOP
             self.dnstrm.status_prev = self.dnstrm.status
-            time.sleep(0.02)
 
 
 backend = Backend()
