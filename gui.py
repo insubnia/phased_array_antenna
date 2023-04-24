@@ -125,6 +125,9 @@ class Window(QMainWindow):
                 self.print("Scanning... ")
         if backend.start_signal != Command.NOP:
             backend.start_signal = Command.NOP
+            fault_index = np.argwhere(backend.dnstrm.pa_powers < 295)
+            if len(fault_index):
+                self.print(f"No RF signal detected. Check PA: {fault_index.flatten()}\n")
 
         # Finish Signal
         match backend.finish_signal:
