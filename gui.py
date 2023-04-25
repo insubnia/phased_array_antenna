@@ -91,6 +91,9 @@ class Window(QMainWindow):
         QShortcut(QKeySequence('Ctrl+Q'), self, self.close)
         QShortcut(QKeySequence('Ctrl+W'), self, self.close)
 
+        # for debug
+        QShortcut(QKeySequence('p'), self, lambda : print(phases))
+
         self.statusbar = self.statusBar()
 
         streamer = threading.Thread(target=backend.process)
@@ -134,12 +137,12 @@ class Window(QMainWindow):
             case Command.RESET:
                 self.print("Reset whole phases\n")
             case Command.SCAN:
-                update_receivers()
                 self.print("Done\n")
             case Command.STEER:
                 self.print(f"Steering to Rx#{backend.upstrm.target + 1}\n")
         if backend.finish_signal != Command.NOP:
             backend.finish_signal = Command.NOP
+            update_receivers()
             self.scroll_to_bottom()
 
     def print(self, *args, **kwargs):
