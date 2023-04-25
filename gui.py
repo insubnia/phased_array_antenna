@@ -280,6 +280,7 @@ class Widget(QWidget):
         """ Phase dials
         """
         phase_dials = np.ndarray((esa.N, esa.M), dtype='O')
+        phase_labels = np.ndarray((esa.N, esa.M), dtype='O')
         def create_single_phase_layout(n, m):
             # idx = remap(esa.M * n + m)
             idx = esa.M * n + m
@@ -290,7 +291,7 @@ class Widget(QWidget):
             grid = QGridLayout()
             _groupbox.setLayout(grid)
 
-            label = QLabel()
+            label = phase_labels[n][m] = QLabel()
             grid.addWidget(label, 1, 0)
             label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             label.setFixedHeight(13)
@@ -301,12 +302,10 @@ class Widget(QWidget):
             dial.setWrapping(True)
             dial.setRange(0, 16)
             def dial_changed():
-                if backend.dnstrm.status == Status.BUSY:
+                if backend.finish_signal != Command.NOP:
                     return
-
                 if dial.value() == 16:
                     dial.setValue(0)
-                label.setText(f"{dial.value():2}")
                 phases.put(idx, dial.value())
                 backend.upstrm.cmd = Command.SET_PHASE
             dial.valueChanged.connect(dial_changed)
@@ -325,6 +324,7 @@ class Widget(QWidget):
                     # val = phases[remap(esa.M * n + m)]
                     val = phases[esa.M * n + m]
                     phase_dials[n][m].setValue(val)
+                    phase_labels[n][m].setText(f"{val:2}")
             esa.set_phases(reshape_phases(phases))
         timer = QTimer(self)
         timer.timeout.connect(phase_updater)
@@ -494,7 +494,7 @@ class Widget(QWidget):
         hbox0.addWidget(clear_button)
         clear_button.setStyleSheet(btn_ss)
         clear_button.setFixedHeight(50)
-        clear_button.clicked.connect(lambda: (backend.upstrm.set_cmd(Command.RESET), phases.fill(0)))
+        clear_button.clicked.connect(lambda: backend.upstrm.set_cmd(Command.RESET))
         clear_button.setShortcut('0')
 
         hbox1 = QHBoxLayout()

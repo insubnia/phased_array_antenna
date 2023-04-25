@@ -194,7 +194,7 @@ class Backend(Logger):
             self.dnstrm.status = Status.DISCONNECTED
             print(f"{Fore.CYAN}Waiting for client packet{Fore.RESET}")
         finally:
-            time.sleep(0.02)
+            pass
 
     def process(self):
         while True:
