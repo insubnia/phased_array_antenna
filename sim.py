@@ -56,6 +56,10 @@ class Esa():
     def set_phases(self, phases_d):
         self.phases = phases_d
 
+    @property
+    def tx_num(self):
+        return self.M * self.N
+
     @classmethod
     def set_amplitude(cls, ampl):
         cls.A = ampl

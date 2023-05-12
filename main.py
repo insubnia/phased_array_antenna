@@ -10,6 +10,7 @@ from datetime import datetime
 from enum import IntEnum, auto
 from colorama import Fore
 
+TX_NUM = 16
 MAX_RX_NUM = 5
 
 
@@ -34,7 +35,7 @@ class Upstream():
         self.valid_cmd = Command.NOP
         self.cmd_sent = Command.NOP
         self.running = False
-        self.phases = np.zeros(16, dtype=np.uint8)
+        self.phases = np.zeros(TX_NUM, dtype=np.uint8)
         self.loss = 80
         self.peri_mode = 1
         self.target = 0
@@ -76,16 +77,16 @@ class Downstream():
         self.status_prev = Status.READY
         self.cmd_rcvd = Command.NOP
         self.confirm = False
-        self.curr_phases = np.zeros(16, dtype=np.int8)
-        self.pa_powers = np.zeros(16, dtype=np.uint16)
+        self.curr_phases = np.zeros(TX_NUM, dtype=np.int8)
+        self.pa_powers = np.zeros(TX_NUM, dtype=np.uint16)
 
         class PeriInfo(object):
             def __init__(self):
                 self.address = np.zeros(6, dtype=np.uint8)
                 self.connected = False
                 self.rfdc_adc, self.bat_adc = 0, 0
-                self.phases = np.zeros(16, dtype=np.int8)
-                self.rfdc_ranges = np.zeros(16, dtype=np.uint16)
+                self.phases = np.zeros(TX_NUM, dtype=np.int8)
+                self.rfdc_ranges = np.zeros(TX_NUM, dtype=np.uint16)
                 self.r, self.theta_d, self.phi_d = 0, 0, 0
         self.peri_infos = [PeriInfo() for _ in range(MAX_RX_NUM)]
 
@@ -122,9 +123,9 @@ class Logger():
         logging.StreamHandler.terminator = ""
 
         s = "rx#, R, θ, ϕ"
-        for i in range(16):
+        for i in range(TX_NUM):
             s += f", ps#{i}"
-        for i in range(16):
+        for i in range(TX_NUM):
             s += f", range#{i}"
         s += ", CCP(uW), Scanning Rate(ms), TOPS/W"
         logging.info(f"{s}\n")

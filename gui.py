@@ -12,9 +12,9 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from main import Status, Command, backend
 from sim import Esa, receivers
 
-phases = np.zeros(16, dtype=np.int8)
 loss = 127
 esa = Esa()
+phases = np.zeros(esa.tx_num, dtype=np.int8)
 
 
 def resource_path(relpath):
@@ -25,7 +25,8 @@ def resource_path(relpath):
     return os.path.abspath(os.path.join(cwd, relpath))
 
 
-def remap(x):
+def remap(x):  # will be deprecated
+    return x
     table = (
         15, 14, 13, 12,
         11, 10, 9, 8,
@@ -289,7 +290,10 @@ class Widget(QWidget):
             idx = esa.M * n + m
             _groupbox = QGroupBox(f"Tx {idx}")
             _groupbox.setFlat(True)
-            _groupbox.setFixedSize(100, 140)
+            if esa.M > 4:
+                _groupbox.setFixedSize(70, 90)
+            else:
+                _groupbox.setFixedSize(100, 140)
 
             grid = QGridLayout()
             _groupbox.setLayout(grid)
@@ -409,6 +413,8 @@ class Widget(QWidget):
             grid.addWidget(profile_label, 3, idx)
             _widgets['profile_label'] = profile_label
             profile_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            if esa.M > 4:
+                profile_label.setStyleSheet("font-size: 7pt;")
 
             """ Rx Positions
             """
