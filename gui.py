@@ -13,6 +13,8 @@ from main import Status, Command, backend
 from sim import Esa, receivers
 
 loss = 127
+ps_code_limit = 16
+
 esa = Esa()
 phases = np.zeros(esa.tx_num, dtype=np.int8)
 
@@ -113,7 +115,7 @@ class Window(QMainWindow):
             self.widget.rx_group.setEnabled(True)
             self.widget.cmd_group.setEnabled(True)
         elif backend.dnstrm.status == Status.BUSY:
-            phases.put(range(0, 16), backend.dnstrm.curr_phases)
+            phases.put(range(0, esa.tx_num), backend.dnstrm.curr_phases)
             self.widget.tx_group.setEnabled(False)
             self.widget.rx_group.setEnabled(True)
             self.widget.cmd_group.setEnabled(False)
@@ -307,11 +309,11 @@ class Widget(QWidget):
             grid.addWidget(dial, 0, 0)
             dial.setNotchesVisible(True)
             dial.setWrapping(True)
-            dial.setRange(0, 16)
+            dial.setRange(0, ps_code_limit)
             def dial_changed():
                 if backend.finish_signal != Command.NOP:
                     return
-                if dial.value() == 16:
+                if dial.value() == ps_code_limit:
                     dial.setValue(0)
                 phases.put(idx, dial.value())
                 backend.upstrm.cmd = Command.SET_PHASE
@@ -414,7 +416,7 @@ class Widget(QWidget):
             _widgets['profile_label'] = profile_label
             profile_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             if esa.M > 4:
-                profile_label.setStyleSheet("font-size: 7pt;")
+                profile_label.setStyleSheet("font-size: 6pt;")
 
             """ Rx Positions
             """
