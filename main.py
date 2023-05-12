@@ -86,7 +86,6 @@ class Downstream():
                 self.connected = False
                 self.rfdc_adc, self.bat_adc = 0, 0
                 self.phases = np.zeros(TX_NUM, dtype=np.int8)
-                self.rfdc_ranges = np.zeros(TX_NUM, dtype=np.uint16)
                 self.r, self.theta_d, self.phi_d = 0, 0, 0
         self.peri_infos = [PeriInfo() for _ in range(MAX_RX_NUM)]
 
@@ -94,14 +93,15 @@ class Downstream():
         self.status = data[0]
         self.cmd_rcvd = data[2]
         self.confirm = data[3]
-        self.curr_phases = np.frombuffer(data[4:20], dtype=np.int8)
-        self.pa_powers = np.frombuffer(data[20:52], dtype=np.uint16)
+        o = 64
+        self.curr_phases = np.frombuffer(data[o: o + TX_NUM], dtype=np.int8)
         o = 128
+        self.pa_powers = np.frombuffer(data[o: o + TX_NUM * 2], dtype=np.uint16)
+        o = 256
         for peri_info in self.peri_infos:
             peri_info.address = np.frombuffer(data[o: o + 6], dtype=np.uint8)
             peri_info.rfdc_adc, peri_info.bat_adc = np.frombuffer(data[o + 8: o + 12], dtype=np.uint16)
-            peri_info.phases = np.frombuffer(data[o + 12: o + 28], dtype=np.int8)
-            peri_info.rfdc_ranges = np.frombuffer(data[o + 28: o + 60], dtype=np.uint16)
+            peri_info.phases = np.frombuffer(data[o + 12: o + 12 + TX_NUM], dtype=np.int8)
             o += 128
 
 
@@ -137,8 +137,6 @@ class Logger():
                 continue
             s += f"{i + 1}, {peri.r}, {peri.theta_d}, {peri.phi_d}"
             for v in peri.phases:
-                s += f", {v}"
-            for v in peri.rfdc_ranges:
                 s += f", {v}"
             self.ccp = random.randint(242, 246) / 10
             self.scanning_rate = random.randint(910, 990) / 100
