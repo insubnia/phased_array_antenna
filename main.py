@@ -64,8 +64,6 @@ class Upstream():
 
 class Downstream():
     def __init__(self):
-        self.status = Status.READY
-        self.status_prev = Status.READY
         self.cmd_fired = Command.NOP
         self.curr_phases = np.zeros(TX_NUM, dtype=np.int8)
         self.pa_powers = np.zeros(TX_NUM, dtype=np.uint16)
@@ -80,8 +78,7 @@ class Downstream():
         self.peri_infos = [PeriInfo() for _ in range(MAX_RX_NUM)]
 
     def unpack_data(self, data):
-        self.status = data[0]
-        self.cmd_fired = data[2]
+        self.cmd_fired = data[0]
         o = 64
         self.curr_phases = np.frombuffer(data[o: o + TX_NUM], dtype=np.int8)
         o = 128
@@ -143,6 +140,7 @@ class Logger():
 class Backend(Logger):
     def __init__(self):
         super().__init__()
+        self.status = Status.READY
         self.start_signal = Command.NOP
         self.finish_signal = Command.NOP
         self.upstrm = Upstream()
@@ -183,7 +181,7 @@ class Backend(Logger):
             data, _ = self.sock.recvfrom(1248)
             self.dnstrm.unpack_data(data)
         except TimeoutError:
-            self.dnstrm.status = Status.DISCONNECTED
+            self.status = Status.DISCONNECTED
             print(f"{Fore.CYAN}Waiting for client packet{Fore.RESET}")
         finally:
             pass
@@ -196,16 +194,18 @@ class Backend(Logger):
             if self.upstrm.cmd != Command.NOP and self.upstrm.cmd == self.dnstrm.cmd_fired:
                 print(f"\n{self.dnstrm.cmd_fired} - Rising Edge")
                 self.upstrm.cmd = Command.NOP
+                self.status = Status.BUSY
                 self.start_signal = self.dnstrm.cmd_fired
             if self.dnstrm.cmd_fired != Command.NOP:
                 pass  # running
             if cmd_fired_prev != Command.NOP and self.dnstrm.cmd_fired == Command.NOP:
                 print(f"{cmd_fired_prev} - Falling Edge")
+                self.status = Status.READY
                 match cmd_fired_prev:
                     case Command.SCAN | Command.STEER:
                         logging.info(self.get_csv_string())
                 self.finish_signal = cmd_fired_prev
-                
+
             cmd_fired_prev = self.dnstrm.cmd_fired
 
 

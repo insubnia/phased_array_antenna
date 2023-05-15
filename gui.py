@@ -109,12 +109,12 @@ class Window(QMainWindow):
         self.show()
 
     def updater(self):
-        if backend.dnstrm.status == Status.READY:
+        if backend.status == Status.READY:
             backend.upstrm.phases = phases.copy()
             self.widget.tx_group.setEnabled(True)
             self.widget.rx_group.setEnabled(True)
             self.widget.cmd_group.setEnabled(True)
-        elif backend.dnstrm.status == Status.BUSY:
+        elif backend.status == Status.BUSY:
             phases.put(range(0, esa.tx_num), backend.dnstrm.curr_phases)
             self.widget.tx_group.setEnabled(False)
             self.widget.rx_group.setEnabled(True)
@@ -123,7 +123,7 @@ class Window(QMainWindow):
             self.widget.tx_group.setEnabled(False)
             self.widget.rx_group.setEnabled(False)
             self.widget.cmd_group.setEnabled(False)
-        self.statusbar.showMessage(Status(backend.dnstrm.status).name.lower())
+        self.statusbar.showMessage(Status(backend.status).name.lower())
 
         # Start Signal
         match backend.start_signal:
