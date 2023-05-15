@@ -223,7 +223,7 @@ class Widget(QWidget):
             esa.set_amplitude(4 + 6 * (127 + val) / 127)
             dsa_label.setText(f"{val * 0.25:.2f} dB")
             backend.upstrm.loss = loss = -val
-            backend.upstrm.cmd = Command.SET_LOSS
+            backend.set_cmd(Command.SET_LOSS)
         dsa_slider.valueChanged.connect(dsa_changed)
         dsa_slider.setValue(-loss)
         QShortcut(QKeySequence('['), self, lambda: dsa_slider.setValue(dsa_slider.value() + 1))
@@ -316,7 +316,7 @@ class Widget(QWidget):
                 if dial.value() == ps_code_limit:
                     dial.setValue(0)
                 phases.put(idx, dial.value())
-                backend.upstrm.cmd = Command.SET_PHASE
+                backend.set_cmd(Command.SET_PHASE)
             dial.valueChanged.connect(dial_changed)
             dial_changed()
 
@@ -488,7 +488,7 @@ class Widget(QWidget):
         scan_button1.setFixedHeight(50)
         def steering_scan():
             backend.upstrm.scan_method = 0
-            backend.upstrm.cmd = Command.SCAN
+            backend.set_cmd(Command.SCAN)
         scan_button1.clicked.connect(steering_scan)
         scan_button1.setShortcut('s')
 
@@ -498,14 +498,14 @@ class Widget(QWidget):
         scan_button2.setFixedHeight(50)
         def fullsweep_scan():
             backend.upstrm.scan_method = 1
-            backend.upstrm.cmd = Command.SCAN
+            backend.set_cmd(Command.SCAN)
         scan_button2.clicked.connect(fullsweep_scan)
 
         clear_button = QPushButton("Reset")
         hbox0.addWidget(clear_button)
         clear_button.setStyleSheet(btn_ss)
         clear_button.setFixedHeight(50)
-        clear_button.clicked.connect(lambda: backend.upstrm.set_cmd(Command.RESET))
+        clear_button.clicked.connect(lambda: backend.set_cmd(Command.RESET))
         clear_button.setShortcut('0')
 
         hbox1 = QHBoxLayout()
@@ -513,7 +513,7 @@ class Widget(QWidget):
 
         def target_button_clicked(i):
             backend.upstrm.target = i
-            backend.upstrm.set_cmd(Command.STEER)
+            backend.set_cmd(Command.STEER)
 
         for i in range(backend.max_rx_num):
             button = QPushButton(f"Rx #{i + 1}")

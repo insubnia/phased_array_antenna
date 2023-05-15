@@ -1,7 +1,6 @@
 #!/usr/bin/python3
 import os
 import sys
-import time
 import socket
 import logging
 import random
@@ -32,19 +31,11 @@ class Command(IntEnum):
 class Upstream():
     def __init__(self):
         self.cmd = Command.NOP
-        self.valid_cmd = Command.NOP
-        self.cmd_sent = Command.NOP
-        self.running = False
         self.phases = np.zeros(TX_NUM, dtype=np.uint8)
         self.loss = 80
         self.peri_mode = 1
         self.target = 0
         self.scan_method = 0
-
-    def set_cmd(self, cmd):
-        self.cmd = cmd
-        if cmd != Command.NOP:
-            self.valid_cmd = cmd
 
     @property
     def packed_data(self):
@@ -75,8 +66,7 @@ class Downstream():
     def __init__(self):
         self.status = Status.READY
         self.status_prev = Status.READY
-        self.cmd_rcvd = Command.NOP
-        self.confirm = False
+        self.cmd_fired = Command.NOP
         self.curr_phases = np.zeros(TX_NUM, dtype=np.int8)
         self.pa_powers = np.zeros(TX_NUM, dtype=np.uint16)
 
@@ -91,8 +81,7 @@ class Downstream():
 
     def unpack_data(self, data):
         self.status = data[0]
-        self.cmd_rcvd = data[2]
-        self.confirm = data[3]
+        self.cmd_fired = data[2]
         o = 64
         self.curr_phases = np.frombuffer(data[o: o + TX_NUM], dtype=np.int8)
         o = 128
@@ -175,6 +164,10 @@ class Backend(Logger):
             print(f"{Fore.RED}{s}{Fore.RESET}")
             # sys.exit()
         self.sock.settimeout(2)
+    
+    def set_cmd(self, cmd):
+        if self.dnstrm.cmd_fired == Command.NOP:
+            self.upstrm.cmd = cmd
 
     @property
     def rx_infos(self):
@@ -196,26 +189,24 @@ class Backend(Logger):
             pass
 
     def process(self):
+        cmd_fired_prev = self.dnstrm.cmd_fired
         while True:
             self.exchange_pkt()
-            if ((self.dnstrm.status == Status.DISCONNECTED) or
-                (self.upstrm.cmd != Command.NOP and self.dnstrm.status != Status.BUSY)):
-                continue
 
-            if self.dnstrm.status_prev == 0 and self.dnstrm.status != 0:
-                # print(f"\n{self.upstrm.cmd} - Rising Edge")
-                self.start_signal = self.upstrm.cmd
-            elif self.dnstrm.status_prev != 0 and self.dnstrm.status == 0:
-                print(f"{self.upstrm.cmd_sent} - Falling Edge")
-                self.finish_signal = self.upstrm.cmd_sent
-                match self.upstrm.cmd_sent:
+            if self.upstrm.cmd != Command.NOP and self.upstrm.cmd == self.dnstrm.cmd_fired:
+                print(f"\n{self.dnstrm.cmd_fired} - Rising Edge")
+                self.upstrm.cmd = Command.NOP
+                self.start_signal = self.dnstrm.cmd_fired
+            if self.dnstrm.cmd_fired != Command.NOP:
+                pass  # running
+            if cmd_fired_prev != Command.NOP and self.dnstrm.cmd_fired == Command.NOP:
+                print(f"{cmd_fired_prev} - Falling Edge")
+                match cmd_fired_prev:
                     case Command.SCAN | Command.STEER:
                         logging.info(self.get_csv_string())
-
-            if self.upstrm.cmd != Command.NOP:
-                self.upstrm.cmd_sent = self.upstrm.cmd
-                self.upstrm.cmd = Command.NOP
-            self.dnstrm.status_prev = self.dnstrm.status
+                self.finish_signal = cmd_fired_prev
+                
+            cmd_fired_prev = self.dnstrm.cmd_fired
 
 
 backend = Backend()
