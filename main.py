@@ -1,6 +1,5 @@
 #!/usr/bin/python3
 import os
-import sys
 import socket
 import logging
 import random
@@ -141,10 +140,9 @@ class Backend(Logger):
     def __init__(self):
         super().__init__()
         self.status = Status.READY
-        self.start_signal = Command.NOP
-        self.finish_signal = Command.NOP
         self.upstrm = Upstream()
         self.dnstrm = Downstream()
+        self.signal, self.sig_dir = Command.NOP, 0
         self.init_socket()
 
     def __del__(self):
@@ -160,12 +158,15 @@ class Backend(Logger):
             s = "\n[Error] Check IP address\n"
             s += "IP address must be 192.168.0.10\n"
             print(f"{Fore.RED}{s}{Fore.RESET}")
-            # sys.exit()
         self.sock.settimeout(2)
     
     def set_cmd(self, cmd):
         if self.dnstrm.cmd_fired == Command.NOP:
             self.upstrm.cmd = cmd
+
+    # @property
+    # def running_cmd(self):
+    #     return self.dnstrm.cmd_fired
 
     @property
     def rx_infos(self):
@@ -197,7 +198,7 @@ class Backend(Logger):
                 print(f"\n{self.dnstrm.cmd_fired} - Rising Edge")
                 self.upstrm.cmd = Command.NOP
                 self.status = Status.BUSY
-                self.start_signal = self.dnstrm.cmd_fired
+                self.signal, self.sig_dir = self.dnstrm.cmd_fired, 1
             elif self.dnstrm.cmd_fired != Command.NOP:
                 pass  # running
             elif cmd_fired_prev != Command.NOP and self.dnstrm.cmd_fired == Command.NOP:
@@ -206,7 +207,7 @@ class Backend(Logger):
                 match cmd_fired_prev:
                     case Command.SCAN | Command.STEER:
                         logging.info(self.get_csv_string())
-                self.finish_signal = cmd_fired_prev
+                self.signal, self.sig_dir = cmd_fired_prev, -1
             else:  # elif self.upstrm.cmd == Command.NOP and self.dnstrm.cmd_fired == Command.NOP:
                 pass  # waiting
 

@@ -54,7 +54,6 @@ def get_phase_display_string(arr1d=None, string=""):
         string += "\n" if n > 0 else ""
         for m in range(esa.M):
             string += " " if m > 0 else ""
-            # code = arr1d[remap(esa.M * n + m)]
             code = arr1d[esa.M * n + m]
             string += f"{code:2d}"
     return string
@@ -89,7 +88,7 @@ class Window(QMainWindow):
                 background-color: aliceblue;
             ''',
             Status.DISCONNECTED: '''
-                background-color: black;
+                background-color: gray;
             ''',
         }
         return ss_hash[backend.status]
@@ -137,28 +136,27 @@ class Window(QMainWindow):
         self.statusbar.showMessage(Status(backend.status).name.lower())
         self.setStyleSheet(self.ss_by_status())
 
-        # Start Signal
-        match backend.start_signal:
-            case Command.SCAN:
-                self.print("Scanning... ")
-        if backend.start_signal != Command.NOP:
-            backend.start_signal = Command.NOP
+        """ Backend signal manager
+        """
+        if backend.sig_dir == 1:  # Rising Edge
+            match backend.signal:
+                case Command.SCAN:
+                    self.print("Scanning... ")
+        elif backend.sig_dir == -1:  # Falling Edge
+            match backend.signal:
+                case Command.RESET:
+                    self.print("Reset whole phases\n")
+                case Command.SCAN:
+                    self.print("Done\n")
+                case Command.STEER:
+                    self.print(f"Steering to Rx#{backend.upstrm.target + 1}\n")
+            update_receivers()
             fault_index = np.argwhere(backend.dnstrm.pa_powers < 295)
             if len(fault_index):
                 self.print(f"No RF signal detected. Check PA: {fault_index.flatten()}\n")
-
-        # Finish Signal
-        match backend.finish_signal:
-            case Command.RESET:
-                self.print("Reset whole phases\n")
-            case Command.SCAN:
-                self.print("Done\n")
-            case Command.STEER:
-                self.print(f"Steering to Rx#{backend.upstrm.target + 1}\n")
-        if backend.finish_signal != Command.NOP:
-            backend.finish_signal = Command.NOP
-            update_receivers()
             self.scroll_to_bottom()
+            backend.signal = Command.NOP
+        backend.sig_dir = 0
 
     def print(self, *args, **kwargs):
         # self.widget.te.append(*args, **kwargs)
@@ -300,7 +298,6 @@ class Widget(QWidget):
         phase_dials = np.ndarray((esa.N, esa.M), dtype='O')
         phase_labels = np.ndarray((esa.N, esa.M), dtype='O')
         def create_single_phase_layout(n, m):
-            # idx = remap(esa.M * n + m)
             idx = esa.M * n + m
             _groupbox = QGroupBox(f"Tx {idx}")
             _groupbox.setFlat(True)
@@ -323,7 +320,7 @@ class Widget(QWidget):
             dial.setWrapping(True)
             dial.setRange(0, ps_code_limit)
             def dial_changed():
-                if backend.finish_signal != Command.NOP:
+                if backend.signal != Command.NOP:
                     return
                 if dial.value() == ps_code_limit:
                     dial.setValue(0)
@@ -342,7 +339,6 @@ class Widget(QWidget):
             dsa_slider.setValue(-loss)
             for n in range(esa.N):
                 for m in range(esa.M):
-                    # val = phases[remap(esa.M * n + m)]
                     val = phases[esa.M * n + m]
                     phase_dials[n][m].setValue(val)
                     phase_labels[n][m].setText(f"{val:2}")
@@ -461,7 +457,7 @@ class Widget(QWidget):
                 bat_adc = min(bat_adc_max, max(bat_adc_min, rx.bat_adc))
                 bat_pct = int((bat_adc - bat_adc_min) / (bat_adc_max - bat_adc_min) * 100)
 
-                if backend.status == Status.BUSY:
+                if backend.signal == Command.SCAN:
                     w['tag'].setStyleSheet("background-color: yellow")
                 elif (backend.upstrm.phases == rx.phases).all():
                     w['tag'].setStyleSheet("background-color: yellow")
