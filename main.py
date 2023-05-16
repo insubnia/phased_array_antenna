@@ -191,20 +191,24 @@ class Backend(Logger):
         while True:
             self.exchange_pkt()
 
+            """ Backend state machine
+            """
             if self.upstrm.cmd != Command.NOP and self.upstrm.cmd == self.dnstrm.cmd_fired:
                 print(f"\n{self.dnstrm.cmd_fired} - Rising Edge")
                 self.upstrm.cmd = Command.NOP
                 self.status = Status.BUSY
                 self.start_signal = self.dnstrm.cmd_fired
-            if self.dnstrm.cmd_fired != Command.NOP:
+            elif self.dnstrm.cmd_fired != Command.NOP:
                 pass  # running
-            if cmd_fired_prev != Command.NOP and self.dnstrm.cmd_fired == Command.NOP:
+            elif cmd_fired_prev != Command.NOP and self.dnstrm.cmd_fired == Command.NOP:
                 print(f"{cmd_fired_prev} - Falling Edge")
                 self.status = Status.READY
                 match cmd_fired_prev:
                     case Command.SCAN | Command.STEER:
                         logging.info(self.get_csv_string())
                 self.finish_signal = cmd_fired_prev
+            else:  # elif self.upstrm.cmd == Command.NOP and self.dnstrm.cmd_fired == Command.NOP:
+                pass  # waiting
 
             cmd_fired_prev = self.dnstrm.cmd_fired
 

@@ -78,10 +78,21 @@ class Window(QMainWindow):
     def __init__(self):
         super().__init__()
         self.widget = Widget()
-        self.setStyleSheet("""
-                           background-color: aliceblue;
-                           """)
         self.init_ui()
+
+    def ss_by_status(self):
+        ss_hash = {
+            Status.READY: '''
+                background-color: aliceblue;
+            ''',
+            Status.BUSY: '''
+                background-color: aliceblue;
+            ''',
+            Status.DISCONNECTED: '''
+                background-color: black;
+            ''',
+        }
+        return ss_hash[backend.status]
 
     @property
     def te(self):
@@ -124,6 +135,7 @@ class Window(QMainWindow):
             self.widget.rx_group.setEnabled(False)
             self.widget.cmd_group.setEnabled(False)
         self.statusbar.showMessage(Status(backend.status).name.lower())
+        self.setStyleSheet(self.ss_by_status())
 
         # Start Signal
         match backend.start_signal:
@@ -449,7 +461,9 @@ class Widget(QWidget):
                 bat_adc = min(bat_adc_max, max(bat_adc_min, rx.bat_adc))
                 bat_pct = int((bat_adc - bat_adc_min) / (bat_adc_max - bat_adc_min) * 100)
 
-                if (backend.upstrm.phases == rx.phases).all():
+                if backend.status == Status.BUSY:
+                    w['tag'].setStyleSheet("background-color: yellow")
+                elif (backend.upstrm.phases == rx.phases).all():
                     w['tag'].setStyleSheet("background-color: yellow")
                 else:
                     w['tag'].setStyleSheet("background-color: ghostwhite")
