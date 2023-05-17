@@ -138,12 +138,12 @@ class Window(QMainWindow):
 
         """ Backend signal manager
         """
-        if backend.sig_dir == 1:  # Rising Edge
-            match backend.signal:
+        if backend.gui_sigdir == 1:  # Rising Edge
+            match backend.gui_signal:
                 case Command.SCAN:
                     self.print("Scanning... ")
-        elif backend.sig_dir == -1:  # Falling Edge
-            match backend.signal:
+        elif backend.gui_sigdir == -1:  # Falling Edge
+            match backend.gui_signal:
                 case Command.RESET:
                     self.print("Reset whole phases\n")
                 case Command.SCAN:
@@ -155,8 +155,8 @@ class Window(QMainWindow):
             if len(fault_index):
                 self.print(f"No RF signal detected. Check PA: {fault_index.flatten()}\n")
             self.scroll_to_bottom()
-            backend.signal = Command.NOP
-        backend.sig_dir = 0
+            backend.gui_signal = Command.NOP
+        backend.gui_sigdir = 0
 
     def print(self, *args, **kwargs):
         # self.widget.te.append(*args, **kwargs)
@@ -320,7 +320,7 @@ class Widget(QWidget):
             dial.setWrapping(True)
             dial.setRange(0, ps_code_limit)
             def dial_changed():
-                if backend.signal != Command.NOP:
+                if backend.gui_signal != Command.NOP:
                     return
                 if dial.value() == ps_code_limit:
                     dial.setValue(0)
@@ -457,7 +457,7 @@ class Widget(QWidget):
                 bat_adc = min(bat_adc_max, max(bat_adc_min, rx.bat_adc))
                 bat_pct = int((bat_adc - bat_adc_min) / (bat_adc_max - bat_adc_min) * 100)
 
-                if backend.signal == Command.SCAN:
+                if backend.gui_signal == Command.SCAN:
                     w['tag'].setStyleSheet("background-color: yellow")
                 elif (backend.upstrm.phases == rx.phases).all():
                     w['tag'].setStyleSheet("background-color: yellow")

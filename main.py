@@ -142,7 +142,7 @@ class Backend(Logger):
         self.status = Status.READY
         self.upstrm = Upstream()
         self.dnstrm = Downstream()
-        self.signal, self.sig_dir = Command.NOP, 0
+        self.gui_signal, self.gui_sigdir = Command.NOP, 0
         self.init_socket()
 
     def __del__(self):
@@ -198,18 +198,18 @@ class Backend(Logger):
                 print(f"\n{self.dnstrm.cmd_fired} - Rising Edge")
                 self.upstrm.cmd = Command.NOP
                 self.status = Status.BUSY
-                self.signal, self.sig_dir = self.dnstrm.cmd_fired, 1
+                self.gui_signal, self.gui_sigdir = self.dnstrm.cmd_fired, 1
             elif self.dnstrm.cmd_fired != Command.NOP:
-                pass  # running
+                ...  # running
             elif cmd_fired_prev != Command.NOP and self.dnstrm.cmd_fired == Command.NOP:
                 print(f"{cmd_fired_prev} - Falling Edge")
                 self.status = Status.READY
                 match cmd_fired_prev:
                     case Command.SCAN | Command.STEER:
                         logging.info(self.get_csv_string())
-                self.signal, self.sig_dir = cmd_fired_prev, -1
+                self.gui_signal, self.gui_sigdir = cmd_fired_prev, -1
             else:  # elif self.upstrm.cmd == Command.NOP and self.dnstrm.cmd_fired == Command.NOP:
-                pass  # waiting
+                ...  # waiting
 
             cmd_fired_prev = self.dnstrm.cmd_fired
 
