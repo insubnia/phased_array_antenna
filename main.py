@@ -195,14 +195,14 @@ class Backend(Logger):
             """ Backend state machine
             """
             if self.upstrm.cmd != Command.NOP and self.upstrm.cmd == self.dnstrm.cmd_fired:
-                print(f"\n{self.dnstrm.cmd_fired} - Rising Edge")
+                print(f"\n * Rising Edge - {Command(self.dnstrm.cmd_fired).name}")
                 self.upstrm.cmd = Command.NOP
                 self.status = Status.BUSY
                 self.gui_signal, self.gui_sigdir = self.dnstrm.cmd_fired, 1
             elif self.dnstrm.cmd_fired != Command.NOP:
                 ...  # running
             elif cmd_fired_prev != Command.NOP and self.dnstrm.cmd_fired == Command.NOP:
-                print(f"{cmd_fired_prev} - Falling Edge")
+                print(f" * Falling Edge - {Command(cmd_fired_prev).name}")
                 self.status = Status.READY
                 match cmd_fired_prev:
                     case Command.SCAN | Command.STEER:
