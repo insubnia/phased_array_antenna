@@ -204,7 +204,10 @@ class Widget(QWidget):
 
     def create_tx_group(self):
         groupbox = QGroupBox("Tx System")
-        groupbox.setFixedSize(430, 675)
+        if esa.M > 4:
+            groupbox.setFixedSize(600, 700)
+        else:
+            groupbox.setFixedSize(430, 675)
         self.style_groupbox(groupbox)
 
         grid = QGridLayout()
@@ -213,25 +216,34 @@ class Widget(QWidget):
         """ DSA
         """
         dsa_groupbox = QGroupBox("DSA")
-        grid.addWidget(dsa_groupbox, 0, 0)
+        if esa.M > 4:
+            grid.addWidget(dsa_groupbox, 1, 0, 2, 1)
+        else:
+            grid.addWidget(dsa_groupbox, 0, 1)
         dsa_groupbox.setFlat(True)
 
-        hbox0 = QHBoxLayout()
-        dsa_groupbox.setLayout(hbox0)
+        if esa.M > 4:
+            box0 = QVBoxLayout()
+        else:
+            box0 = QHBoxLayout()
+        dsa_groupbox.setLayout(box0)
         dsa_label = QLabel()
-        hbox0.addWidget(dsa_label)
+        box0.addWidget(dsa_label)
         dsa_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        dsa_label.setStyleSheet("font-size: 8pt;")
+        dsa_label.setStyleSheet("font-size: 7.5pt;")
         dsa_slider = QSlider()
-        hbox0.addWidget(dsa_slider)
-        dsa_slider.setFixedHeight(75)
+        box0.addWidget(dsa_slider)
+        if esa.M > 4:
+            dsa_slider.setFixedWidth(25)
+        else:
+            dsa_slider.setFixedHeight(75)
         dsa_slider.setRange(-127, 0)
         # dsa_slider.setInvertedAppearance(True)
         def dsa_changed():
             global loss
             val = dsa_slider.value()
             esa.set_amplitude(4 + 6 * (127 + val) / 127)
-            dsa_label.setText(f"{val * 0.25:.2f} dB")
+            dsa_label.setText(f"{val * 0.25:-6.2f}dB")
             backend.upstrm.loss = loss = -val
             backend.set_cmd(Command.SET_LOSS)
         dsa_slider.valueChanged.connect(dsa_changed)
@@ -279,7 +291,7 @@ class Widget(QWidget):
         """ Global peripheral mode combobox
         """
         vbox3 = QVBoxLayout()
-        grid.addLayout(vbox3, 0, 3)
+        # grid.addLayout(vbox3, 0, 3)
         mode_label = QLabel("Peripheral mode")
         vbox3.addWidget(mode_label)
         mode_label.setFixedHeight(20)
@@ -302,7 +314,7 @@ class Widget(QWidget):
             _groupbox = QGroupBox(f"Tx {idx}")
             _groupbox.setFlat(True)
             if esa.M > 4:
-                _groupbox.setFixedSize(70, 90)
+                _groupbox.setFixedSize(65, 85)
             else:
                 _groupbox.setFixedSize(100, 140)
 
@@ -333,7 +345,7 @@ class Widget(QWidget):
 
         for n in range(esa.N):
             for m in range(esa.M):
-                grid.addWidget(create_single_phase_layout(n, m), n + 1, m)
+                grid.addWidget(create_single_phase_layout(n, m), n + 1, m + 1)
 
         def phase_updater():
             dsa_slider.setValue(-loss)
@@ -537,7 +549,7 @@ class Widget(QWidget):
 
     def create_console(self):
         groupbox = QGroupBox("Log")
-        groupbox.setMinimumSize(500, 150)
+        groupbox.setMinimumSize(500, 100)
         self.style_groupbox(groupbox)
 
         hbox0 = QVBoxLayout()

@@ -47,7 +47,7 @@ class Upstream():
         data.put(range(0, 4), to_packable(self.cmd))
         match self.cmd:
             case Command.RESET:
-                pass
+                ...
             case Command.SCAN:
                 data.put(range(4, 8), to_packable(self.scan_method))
             case Command.STEER:
