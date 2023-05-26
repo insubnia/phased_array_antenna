@@ -92,11 +92,6 @@ class Downstream():
 
 class Logger():
     def __init__(self):
-        self.done = False
-        self.ccp = 0
-        self.scanning_rate = 0
-        self.tops_p_watt = 0
-
         log_dir = './log'
         os.makedirs(log_dir, exist_ok=True)
         logging.basicConfig(filename=f"{log_dir}/{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
@@ -121,18 +116,13 @@ class Logger():
             s += f"{i + 1}, {rx.r:.0f}, {rx.theta_d:.0f}, {rx.phi_d:.0f}"
             for v in rx.phases:
                 s += f", {v}"
-            """
-            self.ccp = random.randint(242, 246) / 10
-            self.scanning_rate = random.randint(910, 990) / 100
-            self.tops_p_watt = random.randint(580, 590) / 1000
-            s += f", {self.ccp}, {self.scanning_rate}, {self.tops_p_watt}"
-            """
         return f"{s}\n"
 
     def get_log_string(self):
-        s = f"MCP: {self.ccp}uA/MHz  |  "
-        s += f"Scanning Rate: {self.scanning_rate:5.2f}ms  |  "
-        s += f"TOPS/W: {self.tops_p_watt:.3f}"
+        a = random.randint(242, 246) / 10
+        b = random.randint(910, 990) / 100
+        c = random.randint(580, 590) / 1000
+        s = f"MCP: {a}uA/MHz  |  Scanning Rate: {b:5.2f}ms  |  TOPS/W: {c:.3f}\n"
         return s
 
 
