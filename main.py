@@ -104,30 +104,30 @@ class Logger():
                             # format='%(asctime)s, %(message)s',
                             format='%(message)s',
                             datefmt='%y-%m-%d %H:%M:%S',
-                            level=logging.NOTSET)
+                            level=logging.INFO)
         logging.StreamHandler.terminator = ""
 
         s = "rx#, R, θ, ϕ"
         for i in range(TX_NUM):
             s += f", ps#{i}"
-        for i in range(TX_NUM):
-            s += f", range#{i}"
-        s += ", CCP(uW), Scanning Rate(ms), TOPS/W"
+        # s += ", CCP(uW), Scanning Rate(ms), TOPS/W"
         logging.info(f"{s}\n")
 
     def get_csv_string(self):
         s = ""
-        for i, peri in enumerate(backend.rx_infos):
-            if peri.address[0] == 0:
+        for i, rx in enumerate(backend.rx_infos):
+            if rx.address[0] == 0:
                 continue
-            s += f"{i + 1}, {peri.r}, {peri.theta_d}, {peri.phi_d}"
-            for v in peri.phases:
+            s += f"{i + 1}, {rx.r:.0f}, {rx.theta_d:.0f}, {rx.phi_d:.0f}"
+            for v in rx.phases:
                 s += f", {v}"
+            """
             self.ccp = random.randint(242, 246) / 10
             self.scanning_rate = random.randint(910, 990) / 100
             self.tops_p_watt = random.randint(580, 590) / 1000
-            s += f", {self.ccp}, {self.scanning_rate}, {self.tops_p_watt}\n"
-        return s
+            s += f", {self.ccp}, {self.scanning_rate}, {self.tops_p_watt}"
+            """
+        return f"{s}\n"
 
     def get_log_string(self):
         s = f"MCP: {self.ccp}uA/MHz  |  "
