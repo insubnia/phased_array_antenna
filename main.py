@@ -8,8 +8,10 @@ from datetime import datetime
 from enum import IntEnum, auto
 from colorama import Fore
 
-TX_NUM = 16
-MAX_RX_NUM = 5
+
+class Param():
+    tx_num = 16
+    peri_num = 5
 
 
 class Status(IntEnum):
@@ -30,7 +32,7 @@ class Command(IntEnum):
 class Upstream():
     def __init__(self):
         self.cmd = Command.NOP
-        self.phases = np.zeros(TX_NUM, dtype=np.uint8)
+        self.phases = np.zeros(Param.tx_num, dtype=np.uint8)
         self.loss = 80
         self.peri_mode = 1
         self.target = 0
@@ -64,29 +66,29 @@ class Upstream():
 class Downstream():
     def __init__(self):
         self.cmd_fired = Command.NOP
-        self.curr_phases = np.zeros(TX_NUM, dtype=np.int8)
-        self.pa_powers = np.zeros(TX_NUM, dtype=np.uint16)
+        self.curr_phases = np.zeros(Param.tx_num, dtype=np.int8)
+        self.pa_powers = np.zeros(Param.tx_num, dtype=np.uint16)
 
         class PeriInfo(object):
             def __init__(self):
                 self.address = np.zeros(6, dtype=np.uint8)
                 self.connected = False
                 self.rfdc_adc, self.bat_adc = 0, 0
-                self.phases = np.zeros(TX_NUM, dtype=np.int8)
+                self.phases = np.zeros(Param.tx_num, dtype=np.int8)
                 self.r, self.theta_d, self.phi_d = 0, 0, 0
-        self.peri_infos = [PeriInfo() for _ in range(MAX_RX_NUM)]
+        self.peri_infos = [PeriInfo() for _ in range(Param.peri_num)]
 
     def unpack_data(self, data):
         self.cmd_fired = data[0]
         o = 64
-        self.curr_phases = np.frombuffer(data[o: o + TX_NUM], dtype=np.int8)
+        self.curr_phases = np.frombuffer(data[o: o + Param.tx_num], dtype=np.int8)
         o = 128
-        self.pa_powers = np.frombuffer(data[o: o + TX_NUM * 2], dtype=np.uint16)
+        self.pa_powers = np.frombuffer(data[o: o + Param.tx_num * 2], dtype=np.uint16)
         o = 256
         for peri_info in self.peri_infos:
             peri_info.address = np.frombuffer(data[o: o + 6], dtype=np.uint8)
             peri_info.rfdc_adc, peri_info.bat_adc = np.frombuffer(data[o + 8: o + 12], dtype=np.uint16)
-            peri_info.phases = np.frombuffer(data[o + 12: o + 12 + TX_NUM], dtype=np.int8)
+            peri_info.phases = np.frombuffer(data[o + 12: o + 12 + Param.tx_num], dtype=np.int8)
             o += 128
 
 
@@ -103,14 +105,16 @@ class Logger():
         logging.StreamHandler.terminator = ""
 
         s = "rx#, R, θ, ϕ"
-        for i in range(TX_NUM):
+        for i in range(Param.tx_num):
             s += f", ps#{i}"
         # s += ", CCP(uW), Scanning Rate(ms), TOPS/W"
         logging.info(f"{s}\n")
 
     def get_csv_string(self):
+        assert hasattr(self, 'rx_infos')
+
         s = ""
-        for i, rx in enumerate(backend.rx_infos):
+        for i, rx in enumerate(self.rx_infos):
             if rx.address[0] == 0:
                 continue
             s += f"{i + 1}, {rx.r:.0f}, {rx.theta_d:.0f}, {rx.phi_d:.0f}"
@@ -127,7 +131,9 @@ class Logger():
 
 
 class Backend(Logger):
-    def __init__(self):
+    def __init__(self, tx_num, peri_num):
+        Param.tx_num = tx_num
+        Param.peri_num = peri_num
         super().__init__()
         self.status = Status.READY
         self.upstrm = Upstream()
@@ -204,7 +210,6 @@ class Backend(Logger):
             cmd_fired_prev = self.dnstrm.cmd_fired
 
 
-backend = Backend()
-
 if __name__ == "__main__":
+    backend = Backend()
     backend.process()

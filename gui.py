@@ -10,14 +10,19 @@ from PyQt6.QtGui import *
 from PyQt6.QtCore import *
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 
-from main import Status, Command, backend
+from main import Status, Command, Backend
 from sim import Esa, receivers
 
-esa = Esa(4, 4)
-phase_step = 22.5
-# esa = Esa(8, 8)
-# phase_step = 5.6
+""" Variant
+"""
+if 0:
+    esa = Esa(4, 4)
+    phase_step = 22.5
+else:
+    esa = Esa(8, 8)
+    phase_step = 5.6
 
+backend = Backend(tx_num=esa.tx_num, peri_num=5)
 phases = np.zeros(esa.tx_num, dtype=np.int8)
 ps_code_limit = (int)(360 / phase_step)
 
