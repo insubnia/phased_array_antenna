@@ -14,9 +14,12 @@ from main import Status, Command, backend
 from sim import Esa, receivers
 
 esa = Esa(4, 4)
-ps_code_limit = 16
+phase_step = 22.5
+# esa = Esa(8, 8)
+# phase_step = 5.6
 
 phases = np.zeros(esa.tx_num, dtype=np.int8)
+ps_code_limit = (int)(360 / phase_step)
 
 
 def resource_path(relpath):
@@ -43,7 +46,7 @@ def reshape_phases(_phases):
     for n in range(esa.N):
         for m in range(esa.M):
             val = _phases[remap(esa.M * n + m)]
-            sim_phases[n][m] = 0 if val == -1 else val * 22.5
+            sim_phases[n][m] = 0 if val == -1 else val * phase_step
     return sim_phases
 
 
