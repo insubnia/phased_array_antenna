@@ -9,17 +9,12 @@ c = 3e11
 # parameters
 Fin = 5.8e9
 Ampl = 8
-M, N = 4, 4
 
 # dependencies
-weights = np.full((M, N), Ampl)
 wave_length = c / Fin
 k = 2 * np.pi / wave_length  # wavenumber
 dx = wave_length / 2
 dy = wave_length / 2
-xms = np.arange(0.5 - M / 2, M / 2, 1) * dx
-yns = np.arange(0.5 - N / 2, N / 2, 1) * dy
-yns = np.flip(yns)
 
 """ Coordinate transformation
 """
@@ -44,11 +39,15 @@ THETA, PHI = np.deg2rad(np.meshgrid(_THETA, _PHI))
 
 
 class Esa():
-    M, N = M, N
-
-    def __init__(self):
+    def __init__(self, M, N):
+        self.M, self.N = M, N
         self.theta0_d, self.phi0_d = 0, 0
         self.phases = np.zeros((self.N, self.M), dtype=float)
+
+        self.weights = np.full((self.N, self.M), Ampl)
+        self.xms = np.arange(0.5 - self.M / 2, self.M / 2, 1) * dx
+        self.yns = np.arange(0.5 - self.N / 2, self.N / 2, 1) * dy
+        self.yns = np.flip(self.yns)
 
     def set_target_angle(self, theta_d, phi_d):
         self.theta0_d, self.phi0_d = theta_d, phi_d
@@ -60,51 +59,45 @@ class Esa():
     def tx_num(self):
         return self.M * self.N
 
-    @classmethod
-    def set_amplitude(cls, ampl):
-        cls.A = ampl
-        weights.fill(cls.A)
+    def set_amplitude(self, amplitude):
+        self.weights.fill(amplitude)
 
-    @staticmethod
-    def get_vector(phases):
+    def get_vector(self, phases):
         class _Vector():
             def __init__(self, theta, phi):
                 self.theta = theta
                 self.phi = phi
-        pattern_data = Esa.get_pattern_data_by_phased_array(phases)
+        pattern_data = self.get_pattern_data_by_phased_array(phases)
         idx = np.unravel_index(np.argmax(pattern_data, axis=None), pattern_data.shape)
         return _Vector(np.rad2deg(THETA[idx]), np.rad2deg(PHI[idx]))
 
-    @staticmethod
-    def get_pattern_data_by_target_angle(theta_d, phi_d):
+    def get_pattern_data_by_target_angle(self, theta_d, phi_d):
         theta_r, phi_r = np.deg2rad(theta_d), np.deg2rad(phi_d)
         u0, v0 = u(theta_r, phi_r), v(theta_r, phi_r)
         r = np.zeros(np.shape(PHI))
-        for n, yn in enumerate(yns):
-            for m, xm in enumerate(xms):
-                r = r + weights[n][m] * np.exp(1j * (
+        for n, yn in enumerate(self.yns):
+            for m, xm in enumerate(self.xms):
+                r = r + self.weights[n][m] * np.exp(1j * (
                     k * (xm * (u(THETA, PHI) - u0) + yn * (v(THETA, PHI) - v0))
                 ))
         return abs(r)
 
-    @staticmethod
-    def get_pattern_data_by_phased_array(phase_d):
+    def get_pattern_data_by_phased_array(self, phase_d):
         phase = np.deg2rad(phase_d)
         r = np.zeros(np.shape(PHI))
-        for n, yn in enumerate(yns):
-            for m, xm in enumerate(xms):
-                r = r + weights[n][m] * np.exp(1j * (
+        for n, yn in enumerate(self.yns):
+            for m, xm in enumerate(self.xms):
+                r = r + self.weights[n][m] * np.exp(1j * (
                     k * (xm * u(THETA, PHI) + yn * v(THETA, PHI)) +
                     phase[n][m]
                 ))
         return abs(r)
 
-    @staticmethod
-    def get_desired_phase(theta_d, phi_d):
+    def get_desired_phase(self, theta_d, phi_d):
         theta_r, phi_r = np.deg2rad(theta_d), np.deg2rad(phi_d)
-        phase_d = np.ndarray((N, M))
-        for n, yn in enumerate(yns):
-            for m, xm in enumerate(xms):
+        phase_d = np.ndarray((self.N, self.M))
+        for n, yn in enumerate(self.yns):
+            for m, xm in enumerate(self.xms):
                 cmplx = np.exp(-1j * k * (xm * u(theta_r, phi_r) + yn * v(theta_r, phi_r)))
                 phase_d[n][m] = np.angle(cmplx, deg=True)
         return phase_d
@@ -132,10 +125,10 @@ class Esa():
         # X2, Y2 = np.meshgrid(xms, yns)
         # Z2 = np.zeros_like(X2)
         # ax.scatter(X2, Y2, Z2, marker='o', s=30)
-        for n in range(N):
-            for m in range(M):
-                self.ax.text(xms[m], yns[n], 0, f"{M * n + m}", c='g', size=7, ha='center', va='center')
-        self.angle_text = self.ax.text(xms[-1] + dx / 4, yns[0] + dy / 4, 0, "", ha='left', va='bottom')
+        for n in range(self.N):
+            for m in range(self.M):
+                self.ax.text(self.xms[m], self.yns[n], 0, f"{self.M * n + m}", c='g', size=7, ha='center', va='center')
+        self.angle_text = self.ax.text(self.xms[-1] + dx / 4, self.yns[0] + dy / 4, 0, "", ha='left', va='bottom')
 
         for receiver in receivers:
             receiver.init(self.ax)
@@ -145,11 +138,11 @@ class Esa():
 
     def update(self, _):
         if 0:
-            R = Esa.get_pattern_data_by_target_angle(self.theta0_d, self.phi0_d)
+            R = self.get_pattern_data_by_target_angle(self.theta0_d, self.phi0_d)
         else:
-            # phases = Esa.get_desired_phase(self.theta0_d, self.phi0_d)
-            R = Esa.get_pattern_data_by_phased_array(self.phases)
-            v = Esa.get_vector(self.phases)
+            # phases = self.get_desired_phase(self.theta0_d, self.phi0_d)
+            R = self.get_pattern_data_by_phased_array(self.phases)
+            v = self.get_vector(self.phases)
             self.set_target_angle(v.theta, v.phi)
 
         xyz = spherical_to_cartesian(R, THETA, PHI)
@@ -199,7 +192,7 @@ receivers = [Receiver(f"Rx#{i + 1}") for i in range(5)]
 
 
 if __name__ == "__main__":
-    esa = Esa()
+    esa = Esa(8, 8)
     fig = esa.plot()
 
     def on_press(event):

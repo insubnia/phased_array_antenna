@@ -16,7 +16,7 @@ from sim import Esa, receivers
 loss = 127
 ps_code_limit = 16
 
-esa = Esa()
+esa = Esa(4, 4)
 phases = np.zeros(esa.tx_num, dtype=np.int8)
 
 
@@ -68,7 +68,7 @@ def update_receivers():
             peri_info.theta_d = 0
             peri_info.phi_d = 0
             continue
-        vector = Esa.get_vector(reshape_phases(peri_info.phases))
+        vector = esa.get_vector(reshape_phases(peri_info.phases))
         receiver.set_spherical_coord(125, vector.theta, vector.phi)
         peri_info.theta_d = vector.theta
         peri_info.phi_d = vector.phi
