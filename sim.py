@@ -69,7 +69,18 @@ class Esa():
                 self.phi = phi
         pattern_data = self.get_pattern_data_by_phased_array(phases)
         idx = np.unravel_index(np.argmax(pattern_data, axis=None), pattern_data.shape)
-        return _Vector(np.rad2deg(THETA[idx]), np.rad2deg(PHI[idx]))
+        theta, phi = np.rad2deg(THETA[idx]), np.rad2deg(PHI[idx])
+
+        # positive number conversion
+        if theta == 0:
+            phi = 0
+        elif theta < 0:
+            phi += 180
+        else:
+            phi += 360
+        theta, phi = abs(theta), phi % 360
+
+        return _Vector(theta, phi)
 
     def get_pattern_data_by_target_angle(self, theta_d, phi_d):
         theta_r, phi_r = np.deg2rad(theta_d), np.deg2rad(phi_d)
