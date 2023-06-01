@@ -3,6 +3,7 @@ import os
 import sys
 import threading
 import numpy as np
+from datetime import datetime, timedelta
 from functools import partial
 from PyQt6.QtWidgets import *
 from PyQt6.QtGui import *
@@ -78,20 +79,15 @@ class Window(QMainWindow):
         super().__init__()
         self.widget = Widget()
         self.init_ui()
+        self.start_time = datetime.now()
 
     def ss_by_status(self):
-        ss_hash = {
-            Status.READY: '''
-                background-color: aliceblue;
-            ''',
-            Status.BUSY: '''
-                background-color: aliceblue;
-            ''',
-            Status.DISCONNECTED: '''
-                background-color: gray;
-            ''',
-        }
-        return ss_hash[backend.status]
+        match backend.status:
+            case Status.READY | Status.BUSY:
+                ss = 'background-color: aliceblue;'
+            case _:
+                ss = 'background-color: gray;'
+        return ss
 
     @property
     def te(self):
@@ -139,15 +135,18 @@ class Window(QMainWindow):
         """ Backend signal manager
         """
         if backend.gui_sigdir == 1:  # Rising Edge
+            self.start_time = datetime.now()
             match backend.gui_signal:
                 case Command.SCAN:
                     self.print("Scanning... ")
         elif backend.gui_sigdir == -1:  # Falling Edge
+            td = datetime.now() - self.start_time
+            td = td - timedelta(microseconds=td.microseconds)
             match backend.gui_signal:
                 case Command.RESET:
                     self.print("Reset whole phases\n")
                 case Command.SCAN:
-                    self.print("Done\n")
+                    self.print(f"Done ({td})\n")
                 case Command.STEER:
                     self.print(f"Steering to Rx#{backend.upstrm.target + 1}\n")
             update_receivers()
