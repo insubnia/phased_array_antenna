@@ -13,10 +13,9 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from main import Status, Command, backend
 from sim import Esa, receivers
 
-loss = 127
+esa = Esa(4, 4)
 ps_code_limit = 16
 
-esa = Esa(4, 4)
 phases = np.zeros(esa.tx_num, dtype=np.int8)
 
 
@@ -239,14 +238,13 @@ class Widget(QWidget):
         dsa_slider.setRange(-127, 0)
         # dsa_slider.setInvertedAppearance(True)
         def dsa_changed():
-            global loss
             val = dsa_slider.value()
             esa.set_amplitude(4 + 6 * (127 + val) / 127)
             dsa_label.setText(f"{val * 0.25:-6.2f}dB")
-            backend.upstrm.loss = loss = -val
+            backend.upstrm.loss = -val
             backend.set_cmd(Command.SET_LOSS)
         dsa_slider.valueChanged.connect(dsa_changed)
-        dsa_slider.setValue(-loss)
+        dsa_slider.setValue(-backend.upstrm.loss)
         QShortcut(QKeySequence('['), self, lambda: dsa_slider.setValue(dsa_slider.value() + 1))
         QShortcut(QKeySequence(']'), self, lambda: dsa_slider.setValue(dsa_slider.value() - 1))
         QShortcut(QKeySequence('{'), self, lambda: dsa_slider.setValue(dsa_slider.value() + 4))
@@ -347,7 +345,6 @@ class Widget(QWidget):
                 grid.addWidget(create_single_phase_layout(n, m), n + 1, m + 1)
 
         def phase_updater():
-            dsa_slider.setValue(-loss)
             for n in range(esa.N):
                 for m in range(esa.M):
                     val = phases[esa.M * n + m]
