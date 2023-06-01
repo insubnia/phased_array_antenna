@@ -17,14 +17,15 @@ from sim import Esa, receivers
 """
 if 0:
     esa = Esa(4, 4)
-    phase_step = 22.5
+    ps_n_bits = 4
 else:
     esa = Esa(8, 8)
-    phase_step = 5.6
+    ps_n_bits = 6
+phase_step = 360 / (1 << ps_n_bits)
 
 backend = Backend(tx_num=esa.tx_num, peri_num=5)
 phases = np.zeros(esa.tx_num, dtype=np.int8)
-ps_code_limit = (int)(360 / phase_step)
+ps_code_limit = 1 << ps_n_bits
 
 
 def resource_path(relpath):
@@ -46,7 +47,7 @@ def remap(x):  # will be deprecated
     return table[x]
 
 
-def reshape_phases(_phases):
+def process_phases(_phases):
     sim_phases = np.ndarray((esa.N, esa.M), dtype=float)
     for n in range(esa.N):
         for m in range(esa.M):
@@ -75,7 +76,7 @@ def update_receivers():
             peri_info.theta_d = 0
             peri_info.phi_d = 0
             continue
-        vector = esa.get_vector(reshape_phases(peri_info.phases))
+        vector = esa.get_vector(process_phases(peri_info.phases))
         receiver.set_spherical_coord(125, vector.theta, vector.phi)
         peri_info.theta_d = vector.theta
         peri_info.phi_d = vector.phi
@@ -358,7 +359,7 @@ class Widget(QWidget):
                     val = phases[esa.M * n + m]
                     phase_dials[n][m].setValue(val)
                     phase_labels[n][m].setText(f"{val:2}")
-            esa.set_phases(reshape_phases(phases))
+            esa.set_phases(process_phases(phases))
         timer = QTimer(self)
         timer.timeout.connect(phase_updater)
         timer.start(100)
