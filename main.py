@@ -185,6 +185,9 @@ class Backend(Logger):
             pass
 
     def process(self):
+        positions = self.get_position_array()
+        idx = 0
+
         cmd_fired_prev = self.dnstrm.cmd_fired
         while True:
             self.exchange_pkt()
@@ -209,6 +212,18 @@ class Backend(Logger):
                 ...  # waiting
 
             cmd_fired_prev = self.dnstrm.cmd_fired
+
+    @staticmethod
+    def get_position_array():
+        R = range(50, 300 + 1, 100)
+        THETA_D = range(0, 45 + 1, 10)
+        PHI_D = range(180, 360 + 1, 60)
+        dim3 = np.zeros((len(R), len(THETA_D), len(PHI_D)), dtype='O')
+        for i, r in enumerate(R):
+            for j, theta_d in enumerate(THETA_D):
+                for k, phi_d in enumerate(PHI_D):
+                    dim3[i][j][k] = (r, theta_d, phi_d)
+        return dim3.flatten()
 
 
 if __name__ == "__main__":
