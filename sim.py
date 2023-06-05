@@ -162,7 +162,7 @@ class Esa():
             self.surf.remove()
         self.surf = self.ax.plot_surface(*xyz, cmap=plt.get_cmap('jet'),
                                          lw=0.1, alpha=0.3, rstride=1, cstride=1, aa=True)
-        self.angle_text.set_text(f"θ: {self.theta0_d:7.0f}°\nϕ: {self.phi0_d:7.0f}°")
+        self.angle_text.set_text(f"θ: {self.theta0_d:7.0f}°\nφ: {self.phi0_d:7.0f}°")
 
         for receiver in receivers:
             receiver.update()

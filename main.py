@@ -104,7 +104,7 @@ class Logger():
                             level=logging.INFO)
         logging.StreamHandler.terminator = ""
 
-        s = "rx#, R, θ, ϕ"
+        s = "rx#, R, θ, φ"
         for i in range(Param.tx_num):
             s += f", ps#{i}"
         # s += ", CCP(uW), Scanning Rate(ms), TOPS/W"
@@ -115,12 +115,13 @@ class Logger():
 
         s = ""
         for i, rx in enumerate(self.rx_infos):
-            if rx.address[0] == 0:
+            if np.all(rx.address == 0):
                 continue
             s += f"{i + 1}, {rx.r:.0f}, {rx.theta_d:.0f}, {rx.phi_d:.0f}"
             for v in rx.phases:
                 s += f", {v}"
-        return f"{s}\n"
+            s += "\n"
+        return s
 
     def get_log_string(self):
         a = random.randint(242, 246) / 10

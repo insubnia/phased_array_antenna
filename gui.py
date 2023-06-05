@@ -286,8 +286,8 @@ class Widget(QWidget):
         vbox2.addWidget(phi_label)
         phi_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         phi_label.setMaximumHeight(15)
-        phi_label.setText(f"ϕ: {phi_slider.value():3}°")
-        phi_slider.valueChanged.connect(lambda: phi_label.setText(f"ϕ: {phi_slider.value():3}°"))
+        phi_label.setText(f"φ: {phi_slider.value():3}°")
+        phi_slider.valueChanged.connect(lambda: phi_label.setText(f"φ: {phi_slider.value():3}°"))
 
         QShortcut(QKeySequence('h'), self, lambda: theta_slider.setValue(theta_slider.value() - 5))
         QShortcut(QKeySequence('l'), self, lambda: theta_slider.setValue(theta_slider.value() + 5))
