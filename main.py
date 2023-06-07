@@ -107,6 +107,7 @@ class Logger():
         s = "rx#, R, θ, φ"
         for i in range(Param.tx_num):
             s += f", ps#{i}"
+        s += f"v_rfdc"
         # s += ", CCP(uW), Scanning Rate(ms), TOPS/W"
         logging.info(f"{s}\n")
 
@@ -120,6 +121,7 @@ class Logger():
             s += f"{i + 1}, {rx.r:.0f}, {rx.theta_d:.0f}, {rx.phi_d:.0f}"
             for v in rx.phases:
                 s += f", {v}"
+            s += f", {rx.rfdc_adc}"
             s += "\n"
         return s
 
@@ -181,8 +183,9 @@ class Backend(Logger):
         except TimeoutError:
             self.status = Status.DISCONNECTED
             print(f"{Fore.CYAN}Waiting for client packet{Fore.RESET}")
-        finally:
-            pass
+            return 1
+        else:
+            return 0
 
     def process(self):
         positions = self.get_position_array()
@@ -190,7 +193,8 @@ class Backend(Logger):
 
         cmd_fired_prev = self.dnstrm.cmd_fired
         while True:
-            self.exchange_pkt()
+            if self.exchange_pkt():
+                continue
 
             """ Backend state machine
             """
@@ -209,7 +213,7 @@ class Backend(Logger):
                         logging.info(self.get_csv_string())
                 self.gui_signal, self.gui_sigdir = cmd_fired_prev, -1
             else:  # elif self.upstrm.cmd == Command.NOP and self.dnstrm.cmd_fired == Command.NOP:
-                ...  # waiting
+                self.status = Status.READY
 
             cmd_fired_prev = self.dnstrm.cmd_fired
 
