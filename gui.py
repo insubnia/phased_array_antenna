@@ -36,15 +36,9 @@ def resource_path(relpath):
     return os.path.abspath(os.path.join(cwd, relpath))
 
 
-def remap(x):  # will be deprecated
-    return x
-    table = (
-        15, 14, 13, 12,
-        11, 10, 9, 8,
-        7, 6, 5, 4,
-        3, 2, 1, 0,
-    )
-    return table[x]
+def remap(x):
+    hash = np.flip(range(esa.tx_num))
+    return hash[x]
 
 
 def process_phases(_phases):
@@ -52,7 +46,7 @@ def process_phases(_phases):
     for n in range(esa.N):
         for m in range(esa.M):
             val = _phases[remap(esa.M * n + m)]
-            sim_phases[n][m] = 0 if val == -1 else val * phase_step
+            sim_phases[n][m] = max(0, val * phase_step)
     return sim_phases
 
 
