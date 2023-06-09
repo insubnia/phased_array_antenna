@@ -113,12 +113,14 @@ class Logger():
 
     def get_csv_string(self):
         assert hasattr(self, 'rx_infos')
+        assert hasattr(self, 'curr_pos')
 
         s = ""
         for i, rx in enumerate(self.rx_infos):
             if np.all(rx.address == 0):
                 continue
-            s += f"{i + 1}, {rx.r:.0f}, {rx.theta_d:.0f}, {rx.phi_d:.0f}"
+            # s += f"{i + 1}, {rx.r:.0f}, {rx.theta_d:.0f}, {rx.phi_d:.0f}"
+            s += f"{i + 1}, {self.curr_pos[0]:.0f}, {self.curr_pos[1]:.0f}, {self.curr_pos[2]:.0f}"
             for v in rx.phases:
                 s += f", {v}"
             s += f", {rx.rfdc_adc}"
@@ -133,8 +135,32 @@ class Logger():
         return s
 
 
-class Backend(Logger):
+class EquipCtrl():
+    def __init__(self, start, end):
+        self.positions = self.get_position_array_1d()
+        self.start, self.end = max(start, 0), min(end, len(self.positions))
+        self.pos_idx = self.pos_idx_prev = self.start
+    
+    @property
+    def curr_pos(self):
+        return self.positions[self.pos_idx]
+
+    @staticmethod
+    def get_position_array_1d():
+        R = range(50, 300 + 1, 100)
+        THETA_D = range(0, 45 + 1, 10)
+        PHI_D = range(180, 360 + 1, 60)
+        dim3 = np.zeros((len(R), len(THETA_D), len(PHI_D)), dtype='O')
+        for i, r in enumerate(R):
+            for j, theta_d in enumerate(THETA_D):
+                for k, phi_d in enumerate(PHI_D):
+                    dim3[i][j][k] = (r, theta_d, phi_d)
+        return dim3.flatten()
+
+
+class Backend(Logger, EquipCtrl):
     def __init__(self, tx_num, peri_num):
+        EquipCtrl.__init__(self, 0, 0)
         Param.tx_num = tx_num
         Param.peri_num = peri_num
         super().__init__()
@@ -188,13 +214,15 @@ class Backend(Logger):
             return 0
 
     def process(self):
-        positions = self.get_position_array()
-        idx = 0
-
         cmd_fired_prev = self.dnstrm.cmd_fired
         while True:
             if self.exchange_pkt():
                 continue
+
+            if self.pos_idx != self.pos_idx_prev:
+                self.pos_idx_prev = self.pos_idx
+                print(f"set position to {self.curr_pos}")
+                # set position here
 
             """ Backend state machine
             """
@@ -209,25 +237,18 @@ class Backend(Logger):
                 print(f" * Falling Edge - {Command(cmd_fired_prev).name}")
                 self.status = Status.READY
                 match cmd_fired_prev:
-                    case Command.SCAN | Command.STEER:
+                    case Command.SCAN:
                         logging.info(self.get_csv_string())
+                        if self.pos_idx < self.end:
+                            self.pos_idx += 1
+                            print(f"progress: {self.pos_idx - self.start} / {self.end - self.start}")
                 self.gui_signal, self.gui_sigdir = cmd_fired_prev, -1
             else:  # elif self.upstrm.cmd == Command.NOP and self.dnstrm.cmd_fired == Command.NOP:
                 self.status = Status.READY
+                if self.pos_idx < self.end:
+                    self.upstrm.cmd = Command.SCAN
 
             cmd_fired_prev = self.dnstrm.cmd_fired
-
-    @staticmethod
-    def get_position_array():
-        R = range(50, 300 + 1, 100)
-        THETA_D = range(0, 45 + 1, 10)
-        PHI_D = range(180, 360 + 1, 60)
-        dim3 = np.zeros((len(R), len(THETA_D), len(PHI_D)), dtype='O')
-        for i, r in enumerate(R):
-            for j, theta_d in enumerate(THETA_D):
-                for k, phi_d in enumerate(PHI_D):
-                    dim3[i][j][k] = (r, theta_d, phi_d)
-        return dim3.flatten()
 
 
 if __name__ == "__main__":
