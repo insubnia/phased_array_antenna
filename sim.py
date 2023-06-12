@@ -111,6 +111,7 @@ class Esa():
             for m, xm in enumerate(self.xms):
                 cmplx = np.exp(-1j * k * (xm * u(theta_r, phi_r) + yn * v(theta_r, phi_r)))
                 phase_d[n][m] = np.angle(cmplx, deg=True)
+        phase_d[phase_d < 0] += 360
         return phase_d
 
     def plot(self):
