@@ -133,12 +133,15 @@ class Esa():
         self.ax.set_xlim(-axis_length, axis_length)
         self.ax.set_ylim(-axis_length, axis_length)
 
-        # X2, Y2 = np.meshgrid(xms, yns)
-        # Z2 = np.zeros_like(X2)
-        # ax.scatter(X2, Y2, Z2, marker='o', s=30)
+        X2, Y2 = np.meshgrid(self.xms, self.yns)
+        Z2 = np.zeros_like(X2)
+        self.ax.scatter(X2, Y2, Z2, marker='o', s=30)
+        """
         for n in range(self.N):
             for m in range(self.M):
                 self.ax.text(self.xms[m], self.yns[n], 0, f"{self.M * n + m}", c='g', size=7, ha='center', va='center')
+        """
+        
         self.angle_text = self.ax.text(self.xms[-1] + dx / 4, self.yns[0] + dy / 4, 0, "", ha='left', va='bottom')
 
         for receiver in receivers:

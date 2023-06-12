@@ -37,7 +37,8 @@ def resource_path(relpath):
 
 
 def remap(x):
-    hash = np.flip(range(esa.tx_num))
+    hash = range(esa.tx_num)
+    # hash = np.flip(range(esa.tx_num))
     return hash[x]
 
 
