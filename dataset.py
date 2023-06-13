@@ -1,4 +1,5 @@
 import os
+import random
 import logging
 from datetime import datetime
 from sim import Esa
@@ -10,6 +11,7 @@ else:
     esa = Esa(8, 8)
     ps_n_bits = 6
 phase_step = 360 / (1 << ps_n_bits)
+ps_code_limit = 1 << ps_n_bits
 
 
 class Generator():
@@ -25,7 +27,7 @@ class Generator():
         s = "rx#, R, θ, φ"
         for i in range(esa.tx_num):
             s += f", ps#{i}"
-        s += f"v_rfdc"
+        s += f", v_rfdc"
         logging.info(f"{s}\n")
 
     def add_line(self, r, theta_d, phi_d):
@@ -34,6 +36,7 @@ class Generator():
         phases /= phase_step
         phases = phases.astype(int)
         for v in phases.flatten():
+            v &= 0x3C
             s += f", {v}"
         s += f", {r * 10}"
         logging.info(f"{s}\n")
@@ -44,7 +47,6 @@ if __name__ == "__main__":
     for r in range(50, 300 + 1, 100):
         for theta_d in range(0, 45 + 1, 10):
             for phi_d in range(180, 360 + 1, 60):
-                phi_d = 0 if theta_d == 0 else phi_d
+                if theta_d == 0: phi_d = 0
                 gen.add_line(r, theta_d, phi_d)
-                if theta_d == 0:
-                    break
+                if theta_d == 0: break

@@ -154,7 +154,9 @@ class EquipCtrl():
         for i, r in enumerate(R):
             for j, theta_d in enumerate(THETA_D):
                 for k, phi_d in enumerate(PHI_D):
+                    if theta_d == 0: phi_d = 0
                     dim3[i][j][k] = (r, theta_d, phi_d)
+                    if theta_d == 0: break
         return dim3.flatten()
 
 

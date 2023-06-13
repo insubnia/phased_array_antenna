@@ -22,10 +22,10 @@ else:
     esa = Esa(8, 8)
     ps_n_bits = 6
 phase_step = 360 / (1 << ps_n_bits)
+ps_code_limit = 1 << ps_n_bits
 
 backend = Backend(tx_num=esa.tx_num, peri_num=5)
 phases = np.zeros(esa.tx_num, dtype=np.int8)
-ps_code_limit = 1 << ps_n_bits
 
 
 def resource_path(relpath):
