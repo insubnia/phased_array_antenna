@@ -139,7 +139,8 @@ class EquipCtrl():
     def __init__(self, start, end):
         self.positions = self.get_position_array_1d()
         self.start, self.end = max(start, 0), min(end, len(self.positions))
-        self.pos_idx = self.pos_idx_prev = self.start
+        self.pos_idx = self.start
+        self.pos_idx_prev = -1
     
     @property
     def curr_pos(self):
@@ -147,17 +148,17 @@ class EquipCtrl():
 
     @staticmethod
     def get_position_array_1d():
+        ret = []
         R = range(50, 300 + 1, 100)
         THETA_D = range(0, 45 + 1, 10)
         PHI_D = range(180, 360 + 1, 60)
-        dim3 = np.zeros((len(R), len(THETA_D), len(PHI_D)), dtype='O')
-        for i, r in enumerate(R):
-            for j, theta_d in enumerate(THETA_D):
-                for k, phi_d in enumerate(PHI_D):
+        for r in R:
+            for theta_d in THETA_D:
+                for phi_d in PHI_D:
                     if theta_d == 0: phi_d = 0
-                    dim3[i][j][k] = (r, theta_d, phi_d)
+                    ret.append((r, theta_d, phi_d))
                     if theta_d == 0: break
-        return dim3.flatten()
+        return ret
 
 
 class Backend(Logger, EquipCtrl):
@@ -223,7 +224,7 @@ class Backend(Logger, EquipCtrl):
 
             if self.pos_idx != self.pos_idx_prev:
                 self.pos_idx_prev = self.pos_idx
-                print(f"set position to {self.curr_pos}")
+                print(f"{Fore.MAGENTA}set position to {self.curr_pos}{Fore.RESET}")
                 # set position here
 
             """ Backend state machine
