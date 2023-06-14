@@ -38,7 +38,7 @@ def resource_path(relpath):
 
 def remap(x):
     hash = range(esa.tx_num)
-    # hash = np.flip(range(esa.tx_num))
+    hash = np.flip(range(esa.tx_num))
     return hash[x]
 
 
@@ -153,9 +153,9 @@ class Window(QMainWindow):
                 case Command.STEER:
                     self.print(f"Steering to Rx#{backend.upstrm.target + 1}\n")
             update_receivers()
-            fault_index = np.argwhere(backend.dnstrm.pa_powers < 295)
-            if len(fault_index):
-                self.print(f"No RF signal detected. Check PA: {fault_index.flatten()}\n")
+            # fault_index = np.argwhere(backend.dnstrm.pa_powers < 295)
+            # if len(fault_index):
+            #     self.print(f"No RF signal detected. Check PA: {fault_index.flatten()}\n")
             self.scroll_to_bottom()
             backend.gui_signal = Command.NOP
         backend.gui_sigdir = 0
