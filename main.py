@@ -107,7 +107,7 @@ class Logger():
         s = "rx#, R, θ, φ"
         for i in range(Param.tx_num):
             s += f", ps#{i}"
-        s += f"v_rfdc"
+        s += f", v_rfdc"
         # s += ", CCP(uW), Scanning Rate(ms), TOPS/W"
         logging.info(f"{s}\n")
 
