@@ -72,14 +72,14 @@ def get_phase_display_string(arr1d=None, string=""):
 def update_receivers():
     for i, receiver in enumerate(receivers):
         peri_info = backend.rx_infos[i]
-        if peri_info.address[0] == 0:
+        if all(peri_info.address == 0):
             receiver.r = 0
             peri_info.theta_d = 0
             peri_info.phi_d = 0
             continue
         v = esa.get_vector(process_phases(peri_info.phases))
-        receiver.set_spherical_coord(1, v.theta, v.phi)
-        peri_info.set_spherical_coord(1, v.theta, v.phi)
+        receiver.set_spherical_coord(200, v.theta, v.phi)
+        peri_info.set_spherical_coord(0, v.theta, v.phi)
 
 
 class Window(QMainWindow):
