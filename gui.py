@@ -77,10 +77,9 @@ def update_receivers():
             peri_info.theta_d = 0
             peri_info.phi_d = 0
             continue
-        vector = esa.get_vector(process_phases(peri_info.phases))
-        receiver.set_spherical_coord(125, vector.theta, vector.phi)
-        peri_info.theta_d = vector.theta
-        peri_info.phi_d = vector.phi
+        v = esa.get_vector(process_phases(peri_info.phases))
+        receiver.set_spherical_coord(1, v.theta, v.phi)
+        peri_info.set_spherical_coord(1, v.theta, v.phi)
 
 
 class Window(QMainWindow):

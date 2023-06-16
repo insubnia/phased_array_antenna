@@ -77,6 +77,8 @@ class Downstream():
                 self.v_rfdc_scan = 0
                 self.phases = np.zeros(Param.tx_num, dtype=np.int8)
                 self.r, self.theta_d, self.phi_d = 0, 0, 0
+            def set_spherical_coord(self, r, theta_d, phi_d):
+                self.r, self.theta_d, self.phi_d = r, theta_d, phi_d
         self.peri_infos = [PeriInfo() for _ in range(Param.peri_num)]
 
     def unpack_data(self, data):
@@ -84,12 +86,10 @@ class Downstream():
         self.curr_phases = np.frombuffer(data, dtype=np.int8, count=Param.tx_num, offset=64)
         self.pa_powers = np.frombuffer(data, dtype=np.uint16, count=Param.tx_num * 2 , offset=128)
         o = 256
-        for peri_info in self.peri_infos:
-            buf = data[o:]
-            peri_info.address = np.frombuffer(buf, dtype=np.uint8, count=6, offset=0)
-            peri_info.rfdc_adc, peri_info.bat_adc = np.frombuffer(buf, dtype=np.uint16, count=2, offset=8)
-            peri_info.v_rfdc_scan = np.frombuffer(buf, dtype=np.uint16, count=1, offset=12)
-            peri_info.phases = np.frombuffer(buf, dtype=np.int8, count=Param.tx_num, offset=16)
+        for p in self.peri_infos:
+            p.address = np.frombuffer(data[o:], dtype=np.uint8, count=6, offset=0)
+            p.rfdc_adc, p.bat_adc, p.v_rfdc_scan = np.frombuffer(data[o:], dtype=np.uint16, count=3, offset=8)
+            p.phases = np.frombuffer(data[o:], dtype=np.int8, count=Param.tx_num, offset=16)
             o += 128
 
 
@@ -113,15 +113,20 @@ class Logger():
         logging.info(f"{s}\n")
 
     def get_csv_string(self):
-        assert hasattr(self, 'rx_infos')
-        assert hasattr(self, 'curr_pos')
+        assert hasattr(self, 'rx_infos')  # NOTE: from Backend
+        assert hasattr(self, 'curr_pos')  # NOTE: from EquipCtrl
+        assert hasattr(self, 'pos_idx') and hasattr(self, 'end')
 
         s = ""
         for i, rx in enumerate(self.rx_infos):
             if np.all(rx.address == 0):
                 continue
-            # s += f"{i + 1}, {rx.r:.0f}, {rx.theta_d:.0f}, {rx.phi_d:.0f}"
-            s += f"{i + 1}, {self.curr_pos[0]:.0f}, {self.curr_pos[1]:.0f}, {self.curr_pos[2]:.0f}"
+
+            if self.pos_idx < self.end:  # during equipment control
+                s += f"{i + 1}, {self.curr_pos[0]:.0f}, {self.curr_pos[1]:.0f}, {self.curr_pos[2]:.0f}"
+            else:  # normal case
+                s += f"{i + 1}, {rx.r:.0f}, {rx.theta_d:.0f}, {rx.phi_d:.0f}"
+
             for v in rx.phases:
                 s += f", {v}"
             s += f", {rx.v_rfdc_scan}"
