@@ -74,21 +74,22 @@ class Downstream():
                 self.address = np.zeros(6, dtype=np.uint8)
                 self.connected = False
                 self.rfdc_adc, self.bat_adc = 0, 0
+                self.v_rfdc_scan = 0
                 self.phases = np.zeros(Param.tx_num, dtype=np.int8)
                 self.r, self.theta_d, self.phi_d = 0, 0, 0
         self.peri_infos = [PeriInfo() for _ in range(Param.peri_num)]
 
     def unpack_data(self, data):
         self.cmd_fired = data[0]
-        o = 64
-        self.curr_phases = np.frombuffer(data[o: o + Param.tx_num], dtype=np.int8)
-        o = 128
-        self.pa_powers = np.frombuffer(data[o: o + Param.tx_num * 2], dtype=np.uint16)
+        self.curr_phases = np.frombuffer(data, dtype=np.int8, count=Param.tx_num, offset=64)
+        self.pa_powers = np.frombuffer(data, dtype=np.uint16, count=Param.tx_num * 2 , offset=128)
         o = 256
         for peri_info in self.peri_infos:
-            peri_info.address = np.frombuffer(data[o: o + 6], dtype=np.uint8)
-            peri_info.rfdc_adc, peri_info.bat_adc = np.frombuffer(data[o + 8: o + 12], dtype=np.uint16)
-            peri_info.phases = np.frombuffer(data[o + 12: o + 12 + Param.tx_num], dtype=np.int8)
+            buf = data[o:]
+            peri_info.address = np.frombuffer(buf, dtype=np.uint8, count=6, offset=0)
+            peri_info.rfdc_adc, peri_info.bat_adc = np.frombuffer(buf, dtype=np.uint16, count=2, offset=8)
+            peri_info.v_rfdc_scan = np.frombuffer(buf, dtype=np.uint16, count=1, offset=12)
+            peri_info.phases = np.frombuffer(buf, dtype=np.int8, count=Param.tx_num, offset=16)
             o += 128
 
 
@@ -123,7 +124,7 @@ class Logger():
             s += f"{i + 1}, {self.curr_pos[0]:.0f}, {self.curr_pos[1]:.0f}, {self.curr_pos[2]:.0f}"
             for v in rx.phases:
                 s += f", {v}"
-            s += f", {rx.rfdc_adc}"
+            s += f", {rx.v_rfdc_scan}"
             s += "\n"
         return s
 

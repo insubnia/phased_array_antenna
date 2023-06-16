@@ -36,18 +36,24 @@ def resource_path(relpath):
     return os.path.abspath(os.path.join(cwd, relpath))
 
 
-def remap(x):
-    hash = range(esa.tx_num)
-    hash = np.flip(range(esa.tx_num))
-    return hash[x]
+class Coord():
+    @staticmethod
+    def get_1d_index(m, n):
+        return esa.M * n + m
+
+    @staticmethod
+    def get_2d_index(i):
+        m = i % esa.M
+        n = i // esa.M
+        return m, n
 
 
 def process_phases(_phases):
     sim_phases = np.ndarray((esa.N, esa.M), dtype=float)
-    for n in range(esa.N):
-        for m in range(esa.M):
-            val = _phases[remap(esa.M * n + m)]
-            sim_phases[n][m] = max(0, val * phase_step)
+    for i in range(esa.tx_num):
+        m, n = Coord.get_2d_index(i)
+        m, n = esa.M - m - 1, esa.N - n - 1  # FIXME: y=x symmetry
+        sim_phases[n][m] = max(0, _phases[i] * phase_step)
     return sim_phases
 
 
@@ -58,7 +64,7 @@ def get_phase_display_string(arr1d=None, string=""):
         string += "\n" if n > 0 else ""
         for m in range(esa.M):
             string += " " if m > 0 else ""
-            code = arr1d[esa.M * n + m]
+            code = arr1d[Coord.get_1d_index(m, n)]
             string += f"{code:2d}"
     return string
 
@@ -310,8 +316,8 @@ class Widget(QWidget):
         """
         phase_dials = np.ndarray((esa.N, esa.M), dtype='O')
         phase_labels = np.ndarray((esa.N, esa.M), dtype='O')
-        def create_single_phase_layout(n, m):
-            idx = esa.M * n + m
+        def create_single_phase_layout(m, n):
+            idx = Coord.get_1d_index(m, n)
             _groupbox = QGroupBox(f"Tx {idx}")
             _groupbox.setFlat(True)
             if esa.M > 4:
@@ -346,12 +352,12 @@ class Widget(QWidget):
 
         for n in range(esa.N):
             for m in range(esa.M):
-                grid.addWidget(create_single_phase_layout(n, m), n + 1, m + 1)
+                grid.addWidget(create_single_phase_layout(m, n), n + 1, m + 1)
 
         def phase_updater():
             for n in range(esa.N):
                 for m in range(esa.M):
-                    val = phases[esa.M * n + m]
+                    val = phases[Coord.get_1d_index(m, n)]
                     phase_dials[n][m].setValue(val)
                     phase_labels[n][m].setText(f"{val:2}")
             esa.set_phases(process_phases(phases))
