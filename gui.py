@@ -176,9 +176,8 @@ class Window(QMainWindow):
 class Widget(QWidget):
     def __init__(self):
         super().__init__()
-        self.setStyleSheet("""
-                           background-color: ghostwhite;
-                           """)
+        self.normal_ss = 'background-color: ghostwhite;'
+        self.setStyleSheet(self.normal_ss)
         self.init_ui()
 
     def init_ui(self):
@@ -474,12 +473,14 @@ class Widget(QWidget):
                 bat_adc = min(bat_adc_max, max(bat_adc_min, rx.bat_adc))
                 bat_pct = int((bat_adc - bat_adc_min) / (bat_adc_max - bat_adc_min) * 100)
 
-                if backend.gui_signal == Command.SCAN:
+                if all(rx.address == 0):
+                    w['tag'].setStyleSheet("background-color: darkcyan")
+                elif backend.gui_signal == Command.SCAN:
                     w['tag'].setStyleSheet("background-color: yellow")
-                elif (backend.upstrm.phases == rx.phases).all():
+                elif all(backend.upstrm.phases == rx.phases):
                     w['tag'].setStyleSheet("background-color: yellow")
                 else:
-                    w['tag'].setStyleSheet("background-color: ghostwhite")
+                    w['tag'].setStyleSheet(self.normal_ss)
 
                 w['rfdc_img'].setPixmap(pixmaps[level])
                 w['rfdc_label'].setText(f"{rx.rfdc_adc}")
