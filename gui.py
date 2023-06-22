@@ -109,7 +109,7 @@ class Window(QMainWindow):
         QShortcut(QKeySequence('Ctrl+W'), self, self.close)
 
         # for debug
-        QShortcut(QKeySequence('p'), self, lambda : print(phases))
+        QShortcut(QKeySequence('p'), self, lambda: print(phases))
 
         self.statusbar = self.statusBar()
 
@@ -447,7 +447,7 @@ class Widget(QWidget):
             pos_grid = QGridLayout()
             grid.addLayout(pos_grid, 4, idx)
             r_le, theta_le, phi_le = QLineEdit(), QLineEdit(), QLineEdit()
-            _widgets['vector'] = { 'r': r_le, 'theta': theta_le, 'phi': phi_le, }
+            _widgets['vector'] = {'r': r_le, 'theta': theta_le, 'phi': phi_le, }
             for i, le in enumerate([r_le, theta_le, phi_le]):
                 le.setFixedWidth(50)
                 # le.setValidator(QIntValidator())
@@ -472,6 +472,9 @@ class Widget(QWidget):
                 level = get_level(rx.rfdc_adc)
                 bat_adc = min(bat_adc_max, max(bat_adc_min, rx.bat_adc))
                 bat_pct = int((bat_adc - bat_adc_min) / (bat_adc_max - bat_adc_min) * 100)
+
+                addr = ':'.join(f"{x:02X}" for x in rx.address[:3])
+                w['tag'].setText(f"Rx #{i + 1}\n({addr})")
 
                 if all(rx.address == 0):
                     w['tag'].setStyleSheet("background-color: darkcyan")
