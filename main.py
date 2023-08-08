@@ -33,7 +33,7 @@ class Upstream():
     def __init__(self):
         self.cmd = Command.NOP
         self.phases = np.zeros(Param.tx_num, dtype=np.uint8)
-        self.loss = 80
+        self.loss = 127
         self.peri_mode = 1
         self.target = 0
         self.scan_method = 0
@@ -66,6 +66,7 @@ class Upstream():
 class Downstream():
     def __init__(self):
         self.cmd_fired = Command.NOP
+        self.loss = 127
         self.curr_phases = np.zeros(Param.tx_num, dtype=np.int8)
         self.pa_powers = np.zeros(Param.tx_num, dtype=np.uint16)
 
@@ -83,8 +84,9 @@ class Downstream():
 
     def unpack_data(self, data):
         self.cmd_fired = data[0]
+        self.loss = data[1]
         self.curr_phases = np.frombuffer(data, dtype=np.int8, count=Param.tx_num, offset=64)
-        self.pa_powers = np.frombuffer(data, dtype=np.uint16, count=Param.tx_num * 2 , offset=128)
+        self.pa_powers = np.frombuffer(data, dtype=np.uint16, count=Param.tx_num, offset=128)
         o = 256
         for p in self.peri_infos:
             p.address = np.frombuffer(data[o:], dtype=np.uint8, count=6, offset=0)

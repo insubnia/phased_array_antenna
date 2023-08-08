@@ -15,7 +15,7 @@ from sim import Esa, receivers
 
 """ Variant
 """
-if 0:
+if 1:
     esa = Esa(4, 4)
     ps_n_bits = 4
 else:
@@ -158,9 +158,9 @@ class Window(QMainWindow):
                 case Command.STEER:
                     self.print(f"Steering to Rx#{backend.upstrm.target + 1}\n")
             update_receivers()
-            # fault_index = np.argwhere(backend.dnstrm.pa_powers < 295)
-            # if len(fault_index):
-            #     self.print(f"No RF signal detected. Check PA: {fault_index.flatten()}\n")
+            fault_index = np.argwhere(backend.dnstrm.pa_powers < 250)
+            if len(fault_index):
+                self.print(f"\n[Warning] Below PAs signal is invalid.\n{fault_index.flatten()}\n")
             self.scroll_to_bottom()
             backend.gui_signal = Command.NOP
         backend.gui_sigdir = 0
@@ -176,6 +176,7 @@ class Window(QMainWindow):
 class Widget(QWidget):
     def __init__(self):
         super().__init__()
+        self.dn_loss_prev = 255
         self.normal_ss = 'background-color: ghostwhite;'
         self.setStyleSheet(self.normal_ss)
         self.init_ui()
@@ -252,7 +253,6 @@ class Widget(QWidget):
             backend.upstrm.loss = -val
             backend.set_cmd(Command.SET_LOSS)
         dsa_slider.valueChanged.connect(dsa_changed)
-        dsa_slider.setValue(-backend.upstrm.loss)
         QShortcut(QKeySequence('['), self, lambda: dsa_slider.setValue(dsa_slider.value() + 1))
         QShortcut(QKeySequence(']'), self, lambda: dsa_slider.setValue(dsa_slider.value() - 1))
         QShortcut(QKeySequence('{'), self, lambda: dsa_slider.setValue(dsa_slider.value() + 4))
@@ -352,15 +352,19 @@ class Widget(QWidget):
             for m in range(esa.M):
                 grid.addWidget(create_single_phase_layout(m, n), n + 1, m + 1)
 
-        def phase_updater():
+        def tx_system_updater():
             for n in range(esa.N):
                 for m in range(esa.M):
                     val = phases[Coord.get_1d_index(m, n)]
                     phase_dials[n][m].setValue(val)
                     phase_labels[n][m].setText(f"{val:2}")
             esa.set_phases(process_phases(phases))
+
+            if backend.dnstrm.loss != self.dn_loss_prev:
+                dsa_slider.setValue(-backend.dnstrm.loss)
+            self.dn_loss_prev = backend.dnstrm.loss
         timer = QTimer(self)
-        timer.timeout.connect(phase_updater)
+        timer.timeout.connect(tx_system_updater)
         timer.start(100)
 
         return groupbox
